@@ -60,7 +60,7 @@ def build_virtual_patients(events: pd.DataFrame) -> pd.DataFrame:
 def apply_virtual_ids(events: pd.DataFrame, vp: pd.DataFrame) -> pd.DataFrame:
     df = events.copy()
     df["source_patient_id"] = df["patient_id"]
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")  # aceita horários com e sem fração de segundo
     epoch = pd.Timestamp(config.RELATIVE_EPOCH)
 
     # último dia de internação de cada paciente da base clínica (âncora para áudio/vídeo)
@@ -81,6 +81,8 @@ def fuse_and_alert(df: pd.DataFrame) -> pd.DataFrame:
     win = pd.Timedelta(hours=config.FUSION_WINDOW_HOURS)
     cooldown = pd.Timedelta(hours=config.ALERT_COOLDOWN_HOURS)
     alerts = []
+    # só eventos com pontuação relevante (medium ou maior) entram na fusão
+    df = df[df["score"] >= config.ALERT_MIN_EVENT_SCORE]
     for pid, g in df.groupby("patient_id", sort=False):
         g = g.reset_index(drop=True)
         times = g["timestamp"].to_numpy()
@@ -93,9 +95,12 @@ def fuse_and_alert(df: pd.DataFrame) -> pd.DataFrame:
             per_mod = w.groupby("modality")["score"].max()
             fused = 1 - np.prod([1 - config.MODALITY_WEIGHTS.get(m, 0.5) * s for m, s in per_mod.items()])
             strong = int((per_mod >= 0.5).sum())
+            # "high" exige confirmação: dois tipos de sinal diferentes, NEWS2 elevado
+            # ou mais de uma modalidade alterada; um sinal isolado fica em "medium"
+            confirmed = w["event_type"].nunique() >= 2 or "news2_elevated" in set(w["event_type"]) or strong >= 2
             if fused >= 0.9 and strong >= 2:
                 level = "critical"
-            elif fused >= 0.8:
+            elif fused >= 0.8 and confirmed:
                 level = "high"
             elif fused >= 0.5:
                 level = "medium"

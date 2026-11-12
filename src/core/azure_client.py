@@ -99,6 +99,20 @@ def to_wav16k_bytes(samples, sample_rate: int) -> bytes:
     return buf.getvalue()
 
 
+_SPEECH_TOKEN = {"value": "", "time": 0.0}
+
+
+def _speech_token(force: bool = False) -> str:
+    """Token de acesso do Speech (vale 10 min; renovado a cada 9 min ou quando forçado)."""
+    if force or not _SPEECH_TOKEN["value"] or time.time() - _SPEECH_TOKEN["time"] > 540:
+        resp = requests.post(
+            f"https://{config.AZURE_SPEECH_REGION}.api.cognitive.microsoft.com/sts/v1.0/issueToken",
+            headers={"Ocp-Apim-Subscription-Key": config.AZURE_SPEECH_KEY}, timeout=30)
+        resp.raise_for_status()
+        _SPEECH_TOKEN.update(value=resp.text, time=time.time())
+    return _SPEECH_TOKEN["value"]
+
+
 def speech_to_text(wav_bytes: bytes, language: str = config.LANGUAGE) -> dict | None:
     """
     Transcreve um WAV de até 60 s com a API REST de áudio curto.
@@ -122,12 +136,25 @@ def speech_to_text(wav_bytes: bytes, language: str = config.LANGUAGE) -> dict | 
 
     url = (f"https://{config.AZURE_SPEECH_REGION}.stt.speech.microsoft.com/speech/recognition/"
            f"conversation/cognitiveservices/v1?language={language}&format=detailed")
-    headers = {
-        "Ocp-Apim-Subscription-Key": config.AZURE_SPEECH_KEY,
+    base_headers = {
         "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
         "Accept": "application/json",
     }
-    resp = requests.post(url, headers=headers, data=wav_bytes, timeout=60)
+    resp = None
+    try:
+        for attempt in range(2):            # 2ª tentativa com token novo, se o anterior foi recusado
+            headers = {**base_headers, "Authorization": f"Bearer {_speech_token(force=attempt > 0)}"}
+            resp = requests.post(url, headers=headers, data=wav_bytes, timeout=60)
+            if resp.status_code != 401:
+                break
+    except requests.RequestException as exc:
+        print(f"[azure] Falha de conexão com o Speech ({exc}). Seguindo sem transcrição do Azure.")
+        return None
+    if resp.status_code in (401, 403, 404):
+        print(f"[azure] Speech respondeu {resp.status_code}: confira AZURE_SPEECH_KEY e "
+              f"AZURE_SPEECH_REGION no .env. Seguindo sem transcrição do Azure.")
+        config.AZURE_SPEECH_KEY = ""        # desliga o Speech até o fim desta execução
+        return None
     resp.raise_for_status()
     data = resp.json()
 

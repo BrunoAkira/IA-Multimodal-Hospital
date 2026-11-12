@@ -11,6 +11,8 @@ __pycache__/
 datasets/*
 !datasets/README.md
 sample_datasets/
+example_data/speech/
+*.part
 
 # modelos baixados/treinados
 models/*

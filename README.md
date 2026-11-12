@@ -42,13 +42,20 @@ substituí-las.
 
 ### Início rápido
 
+O repositório já traz **amostras reais de exemplo** em `example_data/` (seção 3.1):
+
 ```bash
 git clone <url-do-repositorio> hospital_ai && cd hospital_ai
 python -m venv .venv && source .venv/Scripts/activate   # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-python tests/make_sample_data.py && export HOSPITAL_AI_DATASETS=sample_datasets
+python scripts/download_models.py            # modelos de visão
+cp .env.example .env                         # preencha as chaves do Azure (seção 5)
+
+export HOSPITAL_AI_DATASETS=example_data
+python scripts/download_example_data.py      # base de fala (2 arquivos, ~740 MB)
 python main.py all
-python -m streamlit run dashboard/app.py
+python main.py video-validation
+python -m streamlit run dashboard/app.py     # http://localhost:8501
 ```
 
 ---
@@ -57,7 +64,7 @@ python -m streamlit run dashboard/app.py
 
 1. [Pré-requisitos](#1-pré-requisitos)
 2. [Instalação (passo a passo em bash)](#2-instalação-passo-a-passo-em-bash)
-3. [Primeiro teste com dados sintéticos](#3-primeiro-teste-com-dados-sintéticos)
+3. [Primeiros testes](#3-primeiros-testes)
 4. [Dados de entrada](#4-dados-de-entrada)
 5. [Azure no plano gratuito](#5-azure-no-plano-gratuito)
 6. [Tutorial dos comandos](#6-tutorial-dos-comandos)
@@ -151,10 +158,36 @@ python -c "import numpy, pandas, sklearn, cv2, pyarrow, ultralytics, streamlit, 
 
 ---
 
-## 3. Primeiro teste com dados sintéticos
+## 3. Primeiros testes
 
-Antes de baixar qualquer dataset, teste o projeto com **dados sintéticos** gerados nos mesmos
-formatos dos datasets reais (não têm valor clínico):
+### 3.1 Com os dados de exemplo incluídos no repositório
+
+A pasta `example_data/` traz amostras pequenas de bases públicas reais, no formato que o sistema
+lê (detalhes e licenças em `example_data/README.md`):
+
+| Pasta | Conteúdo |
+|---|---|
+| `clinical/` | Sinais vitais, prescrições e transferências de 100 pacientes de UTI |
+| `motion_capture/` | Alguns exercícios de reabilitação de um participante (`.amc`) |
+| `exercise_videos/` | Gabarito de fisioterapeuta e ângulos das articulações já calculados de 8 vídeos |
+| `physio_videos/` | Dois trechos curtos de vídeo de exercícios, para OpenPose/YOLOv8 |
+| `speech/` | Base de fala, baixada por `scripts/download_example_data.py` (não é redistribuída) |
+
+```bash
+source .venv/Scripts/activate
+export HOSPITAL_AI_DATASETS=example_data     # vale só para este terminal
+python scripts/download_example_data.py      # base de fala (2 arquivos, ~740 MB, uma vez só)
+
+python main.py inspect
+python main.py all
+python main.py video-validation
+python -m streamlit run dashboard/app.py     # abra http://localhost:8501
+```
+
+### 3.2 Com dados sintéticos (sem nenhum download)
+
+Para conferir a instalação sem baixar nada, o projeto gera **dados sintéticos** nos mesmos
+formatos (não têm valor clínico):
 
 ```bash
 source .venv/Scripts/activate
@@ -167,7 +200,7 @@ python main.py all
 python -m streamlit run dashboard/app.py    # abra http://localhost:8501
 ```
 
-Para voltar a usar os datasets reais:
+Para voltar a usar as bases completas em `datasets/`:
 ```bash
 unset HOSPITAL_AI_DATASETS AZURE_STT_SPEECH_SAMPLES
 ```
@@ -196,7 +229,7 @@ são padronizados em inglês** (nomes de colunas, rótulos, eventos e alertas).
 | Base de exemplo | O que contém | O que demonstra | O que baixar | Ref. |
 |---|---|---|---|---|
 | **Base clínica de UTI** | Registros desidentificados de 100 pacientes internados: sinais vitais, prescrições e transferências entre setores | Detecção de anomalias em sinais vitais, prescrições e movimentação do paciente | O ZIP completo (~15 MB) | [1] |
-| **Base de fala** | Gravações em inglês de pessoas com disartria (dificuldade na fala de origem neurológica) e sem alteração, com o texto lido | Análise de voz (disartria, cansaço, respiração) e qualidade da transcrição | **1** arquivo `.parquet` (~370 MB) | [2] |
+| **Base de fala** | Gravações em inglês de pessoas com disartria (dificuldade na fala de origem neurológica) e sem alteração, com o texto lido | Análise de voz (disartria, cansaço, respiração) e qualidade da transcrição | 2 arquivos `.parquet` (~370 MB cada): `train-00000` (controle) e `train-00002` (com disartria) | [2] |
 | **Base de captura de movimento** | Ângulos das articulações de 10 pessoas em 22 exercícios de reabilitação, cada um em ritmo normal, rápido e lento | Movimento fora do padrão em relação à execução de referência | 1 a 3 participantes (`S01.zip`...) | [3] |
 | **Base de vídeos de exercícios** | Vídeos de 10 pessoas em 6 exercícios de fisioterapia, cada repetição marcada por fisioterapeuta como correta ou incorreta | Postura em vídeo real (OpenPose/YOLOv8) e detecção de execução incorreta | `videos.zip`, `Segmentation.csv`, `Segmentation.txt` | [4] |
 | **Consultas** | 12 roteiros de consulta em inglês escritos para o projeto, com sintomas, termos críticos e tons diferentes | Transcrição (Speech to Text) e análise de texto | já incluídos em `data/consultations/` | — |
@@ -231,7 +264,7 @@ python -m zipfile -e ~/Downloads/mimic-iv-clinical-database-demo-2.2.zip /tmp/cl
 cp -r /tmp/clinica/*/hosp /tmp/clinica/*/icu datasets/clinical/
 
 # Base de fala [2]
-cp ~/Downloads/train-00000-of-00004.parquet datasets/speech/
+cp ~/Downloads/train-0000[02]-of-00004.parquet datasets/speech/
 
 # Base de captura de movimento [3] (repita para S02, S03...)
 python -m zipfile -e ~/Downloads/S01.zip datasets/motion_capture/
@@ -395,7 +428,7 @@ O que acontece:
 1. **Características da voz** de cada fala: velocidade de fala, pausas, pausas longas
    (respiração), F0, jitter, shimmer, HNR, volume, MFCC.
 2. **Classificador de disartria** (regressão logística e Random Forest), validado em falantes
-   que ele nunca ouviu (`GroupKFold` por falante). O melhor fica salvo em
+   que ele nunca ouviu (validação "deixa um falante de fora"). O melhor fica salvo em
    `models/dysarthria_classifier.joblib`.
 3. **Indicadores de cansaço e de dificuldade respiratória**, comparando cada fala com a linha de
    base do próprio falante.
@@ -527,7 +560,9 @@ python main.py fusion
 2. **Fusão em janela de 24 h:** maior pontuação de cada modalidade, combinada por
    `risco = 1 − Π(1 − peso × pontuação)`.
 3. **Alertas:** `medium` (≥ 0,5), `high` (≥ 0,8), `critical` (≥ 0,9 com 2+ modalidades fortes),
-   sem repetir o mesmo paciente antes de 6 h, a menos que piore.
+   sem repetir o mesmo paciente antes de 12 h, a menos que piore. Eventos com pontuação abaixo de
+   0,5 não entram na fusão, e *high* exige confirmação: dois tipos de sinal diferentes, NEWS2
+   elevado ou mais de uma modalidade alterada.
 
 Ver os alertas no terminal:
 ```bash
@@ -576,6 +611,8 @@ Depois de rodar o pipeline de novo, clique em **Reload results** na barra latera
 |---|---|
 | `python scripts/download_models.py` | Baixa YOLOv8n, YOLOv8n-pose e OpenPose COCO para `models/` |
 | `python tests/make_sample_data.py` | Cria `sample_datasets/` com dados sintéticos nos formatos reais |
+| `python scripts/download_example_data.py` | Baixa a base de fala de exemplo para `example_data/speech/` |
+| `python scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas em `datasets/` (recortes pequenos de cada base) |
 
 ---
 
@@ -804,7 +841,7 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | Módulo | Como medimos | Onde ver |
 |---|---|---|
 | Sinais vitais | Injeção de anomalias artificiais → precisão e recall | `clinical_summary.json` |
-| Voz | Classificador validado em falantes nunca vistos (`GroupKFold`) → acurácia, F1, ROC-AUC | `audio_summary.json` |
+| Voz | Classificador validado deixando um falante de fora por vez → acurácia, F1, ROC-AUC | `audio_summary.json` |
 | Captura de movimento | Ritmo rápido/lento como rótulo → ROC-AUC e recall | `video_summary.json` |
 | Speech to Text | WER em fala com e sem disartria | `audio_summary.json`, `speech_azure_stt.csv` |
 
@@ -865,7 +902,7 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | **Alerta (medium / high / critical)** | Aviso para a equipe, gerado quando os eventos de um paciente somam risco suficiente. *Critical* exige dois ou mais tipos de dado alterados ao mesmo tempo | Central de alertas, painel |
 | **Evento** | Registro padronizado de algo detectado (paciente, horário, tipo de dado, pontuação 0–1, explicação). É a "língua comum" entre os módulos | Todos os módulos |
 | **Paciente virtual (VP001...)** | Combinação de registros de bases de exemplo diferentes num só paciente, para demonstrar a fusão. Com dados de um mesmo paciente real, não é necessário | Fusão |
-| **Cooldown** | Tempo mínimo (6 h) antes de repetir o mesmo alerta para o mesmo paciente, a menos que piore | Central de alertas |
+| **Cooldown** | Tempo mínimo (12 h) antes de repetir o mesmo alerta para o mesmo paciente, a menos que piore | Central de alertas |
 | **NEWS2** | *National Early Warning Score 2*: escore de alerta precoce que soma pontos para frequência cardíaca, pressão, saturação, respiração e temperatura fora do normal | Sinais vitais |
 | **z-score robusto** | Quanto um valor se afasta do normal da própria pessoa, usando mediana e MAD em vez de média e desvio-padrão | Sinais vitais, índices de voz |
 | **MAD** | *Median Absolute Deviation*: medida de variação baseada na mediana, pouco afetada por valores extremos | Sinais vitais, índices de voz |
@@ -873,7 +910,7 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | **Cadeia de Markov** | Probabilidade de passar de um estado a outro; aqui, de um setor do hospital a outro | Transferências |
 | **Regressão logística (LogReg)** | Modelo de classificação que dá a probabilidade de um caso pertencer a uma classe | Voz (disartria), vídeo (correto × incorreto) |
 | **Random Forest (RF)** | Conjunto de árvores de decisão que votam na resposta | Voz (disartria) |
-| **GroupKFold / deixa uma pessoa de fora** | Validação em que o modelo é sempre testado em pessoas que não estavam no treino, para não "decorar" quem já viu | Voz, vídeo |
+| **Deixa um de fora (leave-one-group-out)** | Validação em que o modelo é sempre testado em pessoas que não estavam no treino, para não "decorar" quem já viu | Voz, vídeo |
 | **ROC-AUC** | Nota de 0 a 1 de quanto um modelo separa duas classes: 0,5 é acaso, 1,0 é perfeito | Resultados de voz e vídeo |
 | **Precisão / Recall** | Recall: quanto das anomalias reais foi encontrado. Precisão: quanto dos alertas era anomalia de verdade | Avaliação dos sinais vitais |
 | **Disartria** | Dificuldade na fala de origem neurológica (ex.: após AVC), com fala lenta, arrastada ou instável | Análise de voz |

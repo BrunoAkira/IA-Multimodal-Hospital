@@ -40,8 +40,11 @@ def decode_audio(value) -> tuple[np.ndarray, int]:
     raw = value.get("bytes") if isinstance(value, dict) else value
     if raw is None and isinstance(value, dict) and value.get("array") is not None:
         return np.asarray(value["array"], dtype=np.float32), int(value["sampling_rate"])
+    import warnings
     from scipy.io import wavfile          # a base de fala guarda o áudio em WAV
-    sr, y = wavfile.read(io.BytesIO(raw))
+    with warnings.catch_warnings():       # alguns arquivos terminam poucos bytes antes do cabeçalho
+        warnings.simplefilter("ignore", wavfile.WavFileWarning)
+        sr, y = wavfile.read(io.BytesIO(raw))
     y = np.asarray(y)
     if np.issubdtype(y.dtype, np.integer):
         y = y / float(np.iinfo(y.dtype).max)
@@ -75,7 +78,11 @@ def iter_speech(path: Path | None = None, max_rows: int = config.MAX_SPEECH_ROWS
     files = [path] if path else sorted(config.SPEECH_DIR.glob("*.parquet"))
     if not files:
         raise FileNotFoundError(f"Nenhum .parquet da base de fala em {config.SPEECH_DIR}")
-    n = 0
+    total = sum(pq.ParquetFile(f).metadata.num_rows for f in files)
+    # quando há mais falas que o limite, pega uma a cada `stride`, espalhando a amostra
+    # por todos os falantes do arquivo (em vez de só as primeiras linhas)
+    stride = max(1, -(-total // max_rows))
+    n, seen = 0, 0
     for f in files:
         pf = pq.ParquetFile(f)
         cols = pf.schema_arrow.names
@@ -85,6 +92,9 @@ def iter_speech(path: Path | None = None, max_rows: int = config.MAX_SPEECH_ROWS
         for batch in pf.iter_batches(batch_size=config.PARQUET_BATCH_ROWS,
                                      columns=[v for v in c.values() if v]):
             for row in batch.to_pylist():
+                seen += 1
+                if (seen - 1) % stride:
+                    continue
                 audio_val = row[c["audio"]]
                 path_hint = audio_val.get("path", "") if isinstance(audio_val, dict) else ""
                 spk = row.get(c["speaker"]) if c["speaker"] else _speaker_from_path(path_hint)

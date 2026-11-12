@@ -111,5 +111,6 @@ LANGUAGE = "en-US"   # todos os dados são padronizados em inglês
 # e a fusão os reposiciona dentro da internação do paciente virtual.
 RELATIVE_EPOCH = "2000-01-01T00:00:00"
 FUSION_WINDOW_HOURS = 24       # eventos de modalidades diferentes nessa janela se somam
-ALERT_COOLDOWN_HOURS = 6        # não repetir o mesmo alerta do mesmo paciente antes disso
+ALERT_COOLDOWN_HOURS = 12       # não repetir o mesmo alerta do mesmo paciente antes disso
+ALERT_MIN_EVENT_SCORE = 0.5     # eventos abaixo disso (low/info) não entram na fusão
 MODALITY_WEIGHTS = {"clinical": 1.0, "audio": 0.7, "video": 0.6, "text": 0.8}

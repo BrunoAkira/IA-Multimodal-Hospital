@@ -131,7 +131,9 @@ flowchart LR
 
 - Quanto mais tipos de dado alterados ao mesmo tempo, maior o risco. Os dados clínicos pesam mais,
   por serem a medida mais direta do estado do paciente.
-- O mesmo alerta não se repete antes de 6 h, a menos que a situação piore.
+- Só sinais relevantes entram (pontuação 0,5 ou mais), e um alerta *high* precisa de confirmação:
+  dois tipos de sinal diferentes, escore NEWS2 elevado ou mais de um tipo de dado alterado.
+- O mesmo alerta não se repete antes de 12 h, a menos que a situação piore.
 - Com as bases de exemplo, que são de pessoas diferentes, cada "paciente virtual" (`VP001`...)
   combina registros de bases distintas para demonstrar a fusão. Com dados reais de um mesmo
   paciente, a fusão usa o id do próprio paciente.
@@ -172,6 +174,8 @@ flowchart LR
 | `src/fusion.py` | Central de alertas |
 | `dashboard/app.py` | Painel da equipe |
 | `tests/make_sample_data.py` | Gera dados sintéticos para testar sem baixar nada |
+| `example_data/` | Amostras reais pequenas de cada tipo de dado, para rodar o projeto direto do repositório |
+| `scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas |
 
 ---
 

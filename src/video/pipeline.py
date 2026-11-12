@@ -57,7 +57,9 @@ def run_video() -> dict:
         print(f"[video] {exc}")
 
     # --- 2) Vídeos .mp4 com OpenPose + YOLOv8 ---
-    videos = sorted(f for f in config.PHYSIO_VIDEO_DIR.iterdir()
+    # vídeos locais (data/physio_videos) + vídeos da pasta de dados ativa (<dados>/physio_videos)
+    folders = [config.PHYSIO_VIDEO_DIR, config.DATASETS / "physio_videos"]
+    videos = sorted(f for d in folders if d.exists() for f in d.iterdir()
                     if f.suffix.lower() in (".mp4", ".avi", ".mov", ".mkv"))
     if videos:
         from .vision import analyze_video, video_events
@@ -81,7 +83,7 @@ def run_video() -> dict:
             ])
             summary["videos"].append({**res["summary"], "findings": len(res["findings"]), "report": str(rp)})
     else:
-        print(f"[video] Nenhum vídeo (.mp4/.avi/.mov/.mkv) em {config.PHYSIO_VIDEO_DIR} (OpenPose/YOLOv8 não executados)")
+        print(f"[video] Nenhum vídeo (.mp4/.avi/.mov/.mkv) em {config.PHYSIO_VIDEO_DIR} ou {config.DATASETS / 'physio_videos'} (OpenPose/YOLOv8 não executados)")
 
     clear_events("video")
     save_events(events)

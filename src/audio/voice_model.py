@@ -2,7 +2,7 @@
 Modelos sobre as características de voz.
 
 1) Classificador de disartria (supervisionado, rótulos da base de fala)
-   - Validação GroupKFold POR FALANTE: o modelo é sempre testado em pessoas
+   - Validação "deixa um falante de fora": o modelo é sempre testado em pessoas
      que ele não ouviu no treino, o que impede que memorize a voz de cada pessoa.
 2) Indicadores de alteração vocal (não supervisionado, em relação ao próprio falante)
    - fatigue_indicator: fala mais lenta, mais monótona, mais pausas
@@ -17,7 +17,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, confusion_matrix
-from sklearn.model_selection import GroupKFold, cross_val_predict
+from sklearn.model_selection import LeaveOneGroupOut, cross_val_predict
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -30,11 +30,13 @@ def feature_columns(df: pd.DataFrame) -> list[str]:
 
 def train_dysarthria_classifier(df: pd.DataFrame) -> dict:
     data = df[df["group"].isin(["dysarthric", "control"])].reset_index(drop=True)
-    if data["speaker_id"].nunique() < 4 or data["group"].nunique() < 2:
+    # cada grupo precisa de 2+ falantes: ao deixar um de fora, o outro continua no treino
+    per_group = data.groupby("group")["speaker_id"].nunique()
+    if data["group"].nunique() < 2 or per_group.min() < 2:
         return {"error": "Poucos falantes/grupos para validar por falante"}
     X, y = data[feature_columns(data)], (data["group"] == "dysarthric").astype(int)
     groups = data["speaker_id"]
-    cv = GroupKFold(n_splits=min(5, groups.nunique()))
+    cv = LeaveOneGroupOut()   # cada rodada testa um falante e treina com todos os outros
 
     models = {
         "logistic_regression": make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),

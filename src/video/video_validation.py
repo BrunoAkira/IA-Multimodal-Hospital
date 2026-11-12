@@ -64,27 +64,44 @@ def load_segmentation() -> pd.DataFrame:
     return seg
 
 
-def find_videos(exercises: list[int], camera: str = "Camera17", max_per_exercise: int = 4) -> list[dict]:
-    """Lista os vídeos de cada exercício (pasta Ex<n>), no máximo N por exercício."""
+def find_videos(exercises: list[int], seg: pd.DataFrame, camera: str = "Camera17",
+                max_per_exercise: int = 4) -> list[dict]:
+    """
+    Lista os vídeos de cada exercício (pasta Ex<n>), no máximo N por exercício.
+    Sem os arquivos de vídeo, usa os ângulos já calculados em <pasta>/angles/
+    (é assim que os dados de exemplo do repositório funcionam sem os vídeos completos).
+    """
+    precomputed = EXERCISE_DIR / "angles"
     out = []
     for ex in exercises:
-        files = sorted(EXERCISE_DIR.rglob(f"Ex{ex}/*{camera}*.mp4"))
-        for f in files[:max_per_exercise]:
+        items = []
+        for f in sorted(EXERCISE_DIR.rglob(f"Ex{ex}/*{camera}*.mp4")):
             m = re.search(r"PM_\d+", f.name)
             if m:
-                out.append({"exercise_id": ex, "video_id": m.group(0), "path": f})
+                items.append({"exercise_id": ex, "video_id": m.group(0), "path": f,
+                              "angles_file": f"{m.group(0)}_{camera}.csv"})
+        if not items and precomputed.exists():
+            ids = set(seg.loc[seg["exercise_id"] == ex, "video_id"])
+            for f in sorted(precomputed.glob(f"*_{camera}.csv")):
+                vid = f.stem.rsplit("_", 1)[0]
+                if vid in ids:
+                    items.append({"exercise_id": ex, "video_id": vid, "path": None, "angles_file": f.name})
+        out += items[:max_per_exercise]
     return out
 
 
 def video_angles(item: dict) -> pd.DataFrame:
-    """Ângulos quadro a quadro (com cache em results/video_validation_angles/)."""
+    """Ângulos quadro a quadro: pré-calculados (<pasta>/angles/), em cache ou calculados agora."""
+    for folder in (EXERCISE_DIR / "angles", CACHE):
+        f = folder / item["angles_file"]
+        if f.exists():
+            return pd.read_csv(f)
+    if item["path"] is None:
+        raise FileNotFoundError(f"Sem vídeo e sem ângulos para {item['video_id']}")
     CACHE.mkdir(parents=True, exist_ok=True)
-    cache = CACHE / f"{item['video_id']}_{item['path'].stem.split('-')[1]}.csv"
-    if cache.exists():
-        return pd.read_csv(cache)
     print(f"[video-validation] Pose em {item['path'].name} (só pose, sem YOLO de objetos)...")
     res = analyze_video(item["path"], detect_objects=False, max_seconds=600)
-    res["angles"].to_csv(cache, index=False)
+    res["angles"].to_csv(CACHE / item["angles_file"], index=False)
     return res["angles"]
 
 
@@ -189,9 +206,9 @@ def _plot_video(angles: pd.DataFrame, reps_v: pd.DataFrame, joint: str, title: s
 
 def run_video_validation(exercises: list[int], max_per_exercise: int = 4) -> dict:
     seg = load_segmentation()
-    videos = find_videos(exercises, max_per_exercise=max_per_exercise)
+    videos = find_videos(exercises, seg, max_per_exercise=max_per_exercise)
     if not videos:
-        raise FileNotFoundError(f"Nenhum vídeo Camera17 em {EXERCISE_DIR}/Ex<n>/")
+        raise FileNotFoundError(f"Nenhum vídeo Camera17 (ou ângulos pré-calculados) em {EXERCISE_DIR}")
     all_reps, counts, plots = [], [], []
     for item in videos:
         ex = EXERCISES[item["exercise_id"]]

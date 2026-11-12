@@ -11,7 +11,7 @@ def inspect_all():
     print(f"\nPasta de datasets: {config.DATASETS}")
 
     # --- base clínica ---
-    print("\n=== Base clínica de UTI (datasets/clinical) ===")
+    print(f"\n=== Base clínica de UTI ({config.CLINICAL_DIR.name}/) ===")
     for name in ("chartevents", "prescriptions", "transfers"):
         hits = list(config.CLINICAL_DIR.rglob(f"{name}.csv*"))
         if hits:
@@ -21,10 +21,10 @@ def inspect_all():
             print(f"  --  {name}.csv.gz não encontrado")
 
     # --- base de fala ---
-    print("\n=== Base de fala (datasets/speech) ===")
+    print(f"\n=== Base de fala ({config.SPEECH_DIR.name}/) ===")
     files = sorted(config.SPEECH_DIR.glob("*.parquet"))
     if not files:
-        print("  --  nenhum .parquet")
+        print("  --  nenhum .parquet (para baixar a base de exemplo: python scripts/download_example_data.py)")
     for f in files:
         try:
             import pyarrow.parquet as pq
@@ -34,7 +34,7 @@ def inspect_all():
             print("  pyarrow não instalado (pip install pyarrow)")
 
     # --- captura de movimento ---
-    print("\n=== Captura de movimento (datasets/motion_capture) ===")
+    print(f"\n=== Captura de movimento ({config.MOCAP_DIR.name}/) ===")
     from .video.amc import index_motion_capture
     idx = index_motion_capture()
     if idx.empty:
@@ -45,9 +45,18 @@ def inspect_all():
 
     # --- vídeos e consultas ---
     print("\n=== Vídeos de fisioterapia (.mp4/.avi/.mov/.mkv) ===")
-    vids = [f for f in config.PHYSIO_VIDEO_DIR.iterdir()
-            if f.suffix.lower() in (".mp4", ".avi", ".mov", ".mkv")]
-    print(f"  {len(vids)} vídeo(s) em {config.PHYSIO_VIDEO_DIR}")
+    exts = (".mp4", ".avi", ".mov", ".mkv")
+    for d in (config.PHYSIO_VIDEO_DIR, config.DATASETS / "physio_videos"):
+        vids = [f.name for f in d.iterdir() if f.suffix.lower() in exts] if d.exists() else []
+        print(f"  {len(vids)} vídeo(s) em {d}" + (f": {vids}" if vids else ""))
+
+    print("\n=== Vídeos de exercícios com gabarito (exercise_videos/) ===")
+    ev = config.EXERCISE_VIDEO_DIR
+    seg = next(ev.rglob("Segmentation.csv"), None) if ev.exists() else None
+    n_vid = len(list(ev.rglob("*.mp4"))) if ev.exists() else 0
+    n_ang = len(list((ev / "angles").glob("*.csv"))) if (ev / "angles").exists() else 0
+    print(f"  gabarito: {'OK' if seg else '--'} | vídeos: {n_vid} | ângulos pré-calculados: {n_ang}")
+
     print("\n=== Consultas ===")
     txt, wav = list(config.CONSULT_DIR.glob("consult_*.txt")), list(config.CONSULT_DIR.glob("consult_*.wav"))
     print(f"  {len(txt)} roteiros, {len(wav)} gravações .wav")
