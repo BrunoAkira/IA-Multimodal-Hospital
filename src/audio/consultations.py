@@ -3,10 +3,10 @@
 
 Pasta data/consultations/:
     consult_01.txt   roteiro em inglês (Doctor: ... / Patient: ...)
-    consult_01.wav   gravação desse roteiro (voz do grupo ou scripts/synthesize_consultations.py)
+    consult_01.wav   gravação da leitura desse roteiro
 
-Se não houver .wav ou chave do Azure, usamos o próprio roteiro como "transcrição"
-(fica marcado como transcript_source="script") para o resto do pipeline rodar.
+Sem .wav (ou sem cota do Azure no mês), o texto do roteiro é usado como transcrição
+e marcado como transcript_source="script".
 """
 from __future__ import annotations
 

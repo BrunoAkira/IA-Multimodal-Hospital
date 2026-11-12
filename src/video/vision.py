@@ -1,5 +1,5 @@
 """
-Visão computacional em vídeos de fisioterapia (.mp4 gravados pelo grupo).
+Visão computacional em vídeos de fisioterapia (.mp4, .avi, .mov, .mkv).
 
   * OpenPose (via OpenCV DNN, roda em CPU) -> 18 pontos do corpo por quadro
       - se os pesos do OpenPose não estiverem em models/openpose/, usamos
@@ -13,9 +13,9 @@ A partir dos pontos calculamos ângulos (joelho, quadril, ombro, cotovelo) e
 procuramos: amplitude reduzida, assimetria esquerda/direita, repetições
 irregulares e possível queda.
 
-Para economizar CPU/memória: processamos ~5 quadros por segundo, redimensionados
-para 640 px de largura, e um quadro por vez (nada do vídeo fica em memória).
-Nome do vídeo: <exercicio>_<qualquer_coisa>.mp4  (ex.: squat_patient01.mp4)
+Processamento: ~5 quadros por segundo, redimensionados para 640 px de largura,
+um quadro por vez (o vídeo não é carregado inteiro na memória).
+O prefixo do nome do arquivo define o exercício (ex.: squat_patient01.mp4).
 """
 from __future__ import annotations
 
@@ -56,7 +56,7 @@ PHYSIO_EXERCISES = {
     "elbow_flexion": {"joint": "elbow", "min_rom": 90},
 }
 
-# Zonas em coordenadas normalizadas (0..1) da imagem. Ajuste ao enquadramento da sua câmera.
+# Zonas padrão em coordenadas normalizadas (0..1) da imagem; um <video>.zones.json substitui por vídeo.
 ZONES = {
     "exercise_area": np.array([[0.15, 0.0], [0.85, 0.0], [0.85, 1.0], [0.15, 1.0]]),
     "fall_risk_floor": np.array([[0.0, 0.85], [1.0, 0.85], [1.0, 1.0], [0.0, 1.0]]),

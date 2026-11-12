@@ -13,19 +13,19 @@ from dotenv import load_dotenv
 # Caminhos
 # ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parents[1]
-load_dotenv(ROOT / ".env")  # lê as chaves do Azure do arquivo .env (se existir)
+load_dotenv(ROOT / ".env")  # lê as chaves do Azure do arquivo .env
 
-# HOSPITAL_AI_DATASETS permite apontar para outra pasta (ex.: dados de amostra dos testes)
+# HOSPITAL_AI_DATASETS aponta para outra pasta de dados (ex.: dados sintéticos de teste)
 DATASETS = Path(os.getenv("HOSPITAL_AI_DATASETS", ROOT / "datasets"))
 VIDEO_DIR = DATASETS / "video"          # UL-RED extraído (S01/, S02/, ...)
 AUDIO_DIR = DATASETS / "audio"          # TORGO em Parquet
 CLINICAL_DIR = DATASETS / "clinical"    # MIMIC-IV Demo (hosp/, icu/)
 
 CONSULT_DIR = ROOT / "data" / "consultations"   # roteiros .txt + gravações .wav
-PHYSIO_VIDEO_DIR = ROOT / "data" / "physio_videos"  # vídeos .mp4 gravados pelo grupo
+PHYSIO_VIDEO_DIR = ROOT / "data" / "physio_videos"  # vídeos de fisioterapia a analisar
 MODELS_DIR = ROOT / "models"            # pesos do OpenPose / YOLO e modelos treinados
 RESULTS_DIR = ROOT / "results"          # tudo que o pipeline gera
-CACHE_DIR = RESULTS_DIR / "cache"       # respostas do Azure salvas (nunca chamamos 2x)
+CACHE_DIR = RESULTS_DIR / "cache"       # respostas do Azure já recebidas (evita chamadas repetidas)
 REPORTS_DIR = RESULTS_DIR / "reports"   # relatórios HTML
 
 for _d in (RESULTS_DIR, CACHE_DIR, REPORTS_DIR, MODELS_DIR, PHYSIO_VIDEO_DIR, CONSULT_DIR):
@@ -36,7 +36,7 @@ EVENTS_FILE = RESULTS_DIR / "events.jsonl"   # todos os eventos de todos os mód
 ALERTS_FILE = RESULTS_DIR / "alerts.csv"     # alertas finais após a fusão
 
 # ---------------------------------------------------------------------------
-# Limites de memória (máquina com 24 GB: lemos tudo em pedaços)
+# Leitura em pedaços (controle do uso de memória)
 # ---------------------------------------------------------------------------
 CSV_CHUNK_ROWS = 200_000      # linhas por pedaço ao ler chartevents
 PARQUET_BATCH_ROWS = 32       # áudios por lote ao ler o TORGO
@@ -79,7 +79,7 @@ VITAL_PLAUSIBLE = {
 ROBUST_Z_THRESHOLD = 4.0   # |z| robusto acima disso = mudança brusca
 ROLLING_WINDOW = 24        # nº de medições anteriores usadas como "normal" do paciente
 
-# Medicamentos de alto risco (início/alteração gera atenção extra)
+# Medicamentos de alto risco (início ou alteração aumenta a pontuação do evento)
 HIGH_ALERT_DRUGS = [
     "insulin", "heparin", "warfarin", "enoxaparin", "morphine", "hydromorphone",
     "fentanyl", "oxycodone", "potassium chloride", "norepinephrine", "vasopressin",
@@ -87,7 +87,7 @@ HIGH_ALERT_DRUGS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Azure (plano gratuito F0) — nunca passamos de ~80% da cota mensal
+# Azure (plano gratuito F0) — limite de uso: ~80% da cota mensal
 # ---------------------------------------------------------------------------
 AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY", "")
 AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION", "")

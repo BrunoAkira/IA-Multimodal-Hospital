@@ -1,5 +1,5 @@
 """
-Hospital AI — monitoramento multimodal (protótipo acadêmico).
+Hospital AI — monitoramento multimodal de pacientes.
 
 Comandos:
     python main.py inspect     # confere datasets, vídeos, consultas e chaves do Azure
@@ -17,7 +17,7 @@ import json
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Hospital AI — academic multimodal monitoring prototype")
+    parser = argparse.ArgumentParser(description="Hospital AI — multimodal patient monitoring")
     parser.add_argument("command", choices=["inspect", "clinical", "audio", "video", "rehab24", "fusion", "all", "monitor"])
     parser.add_argument("--exercises", default="1,6", help="rehab24: ids dos exercícios (1=arm abduction ... 6=squats)")
     parser.add_argument("--max-videos", type=int, default=4, help="rehab24: máximo de vídeos por exercício")

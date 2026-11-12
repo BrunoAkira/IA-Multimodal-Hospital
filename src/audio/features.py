@@ -1,5 +1,5 @@
 """
-Extração de características acústicas da voz (só numpy/scipy: leve e sem dependências extras).
+Extração de características acústicas da voz (implementada com numpy e scipy).
 
 O que cada característica indica (literatura de fala patológica):
   * speech_rate / pause_ratio / long_pauses -> fala lenta e pausada (disartria, cansaço,
@@ -10,8 +10,8 @@ O que cada característica indica (literatura de fala patológica):
   * rms_db / rms_cv                         -> volume e sua estabilidade (voz fraca = cansaço)
   * mfcc_1..13                              -> "timbre" geral (usado pelo classificador)
 
-Obs.: jitter/shimmer aqui são aproximações por quadro (frame), não o cálculo
-ciclo a ciclo do Praat. Para o objetivo do projeto (comparar falantes) isso basta.
+Jitter e shimmer são calculados por quadro (frame), uma aproximação do cálculo
+ciclo a ciclo do Praat, suficiente para comparar falantes entre si.
 """
 from __future__ import annotations
 

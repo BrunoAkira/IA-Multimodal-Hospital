@@ -15,6 +15,3 @@ ultralytics        # instala o PyTorch (CPU) automaticamente
 # --- dashboard ---
 streamlit
 plotly
-# --- opcionais ---
-# soundfile        # só se o TORGO vier em FLAC em vez de WAV
-# pyttsx3          # gerar os .wav das consultas com voz sintética offline

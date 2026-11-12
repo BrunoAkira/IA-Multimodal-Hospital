@@ -157,7 +157,7 @@ def build_repetition_table(index: pd.DataFrame | None = None, system: str = "mar
         try:
             for rep in analyze_pair(r1.iloc[0]["path"], r3.iloc[0]["path"]):
                 rows.append({"subject": subj, "motion": motion, **rep})
-        except Exception as exc:   # arquivo incompleto (o README lista alguns)
+        except Exception as exc:   # arquivo incompleto no dataset
             print(f"[video] {subj}/{motion} ignorado: {exc}")
     return pd.DataFrame(rows)
 

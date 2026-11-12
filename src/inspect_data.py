@@ -1,4 +1,4 @@
-"""Inspeção rápida: mostra o que foi encontrado em cada pasta de datasets (rode antes de tudo)."""
+"""Inspeção: mostra o que foi encontrado em cada pasta de dados e o estado das chaves do Azure."""
 from __future__ import annotations
 
 import pandas as pd

@@ -40,12 +40,8 @@ def decode_audio(value) -> tuple[np.ndarray, int]:
     raw = value.get("bytes") if isinstance(value, dict) else value
     if raw is None and isinstance(value, dict) and value.get("array") is not None:
         return np.asarray(value["array"], dtype=np.float32), int(value["sampling_rate"])
-    try:
-        from scipy.io import wavfile
-        sr, y = wavfile.read(io.BytesIO(raw))
-    except Exception:
-        import soundfile as sf   # fallback para formatos que o scipy não lê (ex.: FLAC)
-        y, sr = sf.read(io.BytesIO(raw))
+    from scipy.io import wavfile          # o TORGO guarda o áudio em WAV
+    sr, y = wavfile.read(io.BytesIO(raw))
     y = np.asarray(y)
     if np.issubdtype(y.dtype, np.integer):
         y = y / float(np.iinfo(y.dtype).max)

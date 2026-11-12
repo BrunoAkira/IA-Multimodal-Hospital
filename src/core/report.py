@@ -1,7 +1,5 @@
 """
 Relatórios automáticos em HTML (um arquivo único, imagens embutidas em base64).
-
-Abra no navegador e use "Imprimir -> Salvar como PDF" se precisar de PDF.
 """
 from __future__ import annotations
 
@@ -29,7 +27,7 @@ TEMPLATE = Template("""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8
  .note{font-size:12px;color:#666;background:#fafafa;padding:8px;border-left:3px solid #ccc}
 </style></head><body>
 <h1>{{ title }}</h1>
-<p>Generated {{ now }} — academic prototype, <b>not for clinical decisions</b>.</p>
+<p>Generated {{ now }} — research prototype, <b>not for clinical decisions</b>.</p>
 {% for s in sections %}
  <h2>{{ s.heading }}</h2>
  {% if s.text %}<p>{{ s.text }}</p>{% endif %}

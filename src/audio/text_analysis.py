@@ -1,11 +1,11 @@
 """
 Análise do texto transcrito: termos clínicos críticos + sentimento.
 
-Caminho principal (exigido na entrega): Azure Text Analytics
+Caminho principal: Azure AI Language (Text Analytics)
     - analyze_health   -> entidades clínicas (sintomas, remédios...) e se foram NEGADAS
     - analyze_sentiment -> sentimento do paciente (positivo/neutro/negativo)
-Fallback local (sem chave ou cota esgotada): dicionário de termos + regra de negação
-e um léxico simples de sentimento. Assim o pipeline sempre roda.
+Proteção de cota (cota do mês esgotada): dicionário de termos + regra de negação
+e um léxico simples de sentimento.
 """
 from __future__ import annotations
 

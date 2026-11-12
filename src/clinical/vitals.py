@@ -1,7 +1,7 @@
 """
 Detecção de anomalias em séries temporais de sinais vitais.
 
-Três camadas, da mais simples para a mais "IA":
+Camadas de detecção:
   1. Limites clínicos fixos (ex.: SpO2 < 90%)        -> regra
   2. NEWS2 (escore de alerta precoce usado em hospitais) -> regra clínica validada
   3. Detector em fluxo (streaming) por paciente:
@@ -152,8 +152,8 @@ def detect_multivariate(hourly: pd.DataFrame, contamination: float = 0.01) -> tu
 
 
 # ---------------------------------------------------------------------------
-# Avaliação: injetamos anomalias artificiais e medimos se o detector as encontra
-# (o MIMIC não tem rótulo de "anomalia", então essa é a forma honesta de medir)
+# Avaliação: injeta anomalias artificiais e mede se o detector as encontra
+# (a base clínica não tem rótulo de anomalia)
 # ---------------------------------------------------------------------------
 INJECT_DELTA = {"heart_rate": 45, "systolic_bp": -45, "spo2": -9, "resp_rate": 14}
 
@@ -176,7 +176,7 @@ def evaluate_with_injection(hourly: pd.DataFrame, rate: float = 0.02, seed: int 
             "injected": int(injected.sum()),
             "precision": round(tp / (tp + fp), 3) if tp + fp else 0.0,
             "recall": round(tp / (tp + fn), 3) if tp + fn else 0.0,
-            # obs.: "falsos positivos" incluem anomalias reais do MIMIC, então a precisão é conservadora
+            # os "falsos positivos" incluem anomalias reais da base, por isso a precisão é um limite inferior
         }
     return results
 

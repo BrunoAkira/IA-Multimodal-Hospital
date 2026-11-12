@@ -1,14 +1,10 @@
 """
-Baixa os pesos dos modelos de visão (uma vez só), todos gratuitos:
+Baixa os pesos dos modelos de visão para a pasta models/:
 
   * YOLOv8n (detecção de objetos, ~6 MB) e YOLOv8n-pose (~7 MB) — Ultralytics
   * OpenPose COCO (18 pontos, ~200 MB) — CMU Perceptual Computing Lab
 
-    python scripts/download_models.py
-
-Se o servidor da CMU estiver fora do ar (acontece), o projeto usa o YOLOv8-pose
-automaticamente. Você também pode baixar o .caffemodel manualmente e colocar em
-models/openpose/pose_iter_440000.caffemodel.
+Se o download do OpenPose falhar, a estimativa de pose usa o YOLOv8-pose.
 Licenças: OpenPose = uso acadêmico/não comercial; YOLOv8 = AGPL-3.0.
 """
 from pathlib import Path

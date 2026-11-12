@@ -1,14 +1,9 @@
 """
-Gera dados de AMOSTRA (sintéticos) nos mesmos formatos dos datasets reais:
-  * MIMIC-IV Demo: hosp/prescriptions, hosp/transfers, icu/chartevents (.csv.gz)
-  * TORGO: Parquet com coluna de áudio (precisa de pyarrow) e metadados
-  * UL-RED: arquivos .amc (S01/Marker/Clean/...)
-
-Serve para testar o pipeline inteiro sem baixar nada:
-    python tests/make_sample_data.py
-    set HOSPITAL_AI_DATASETS=sample_datasets   (Windows)  |  export HOSPITAL_AI_DATASETS=sample_datasets
-    python main.py all
-NÃO são dados reais: os números não têm valor clínico.
+Gera dados sintéticos nos mesmos formatos das bases reais, para testar o pipeline completo:
+  * base clínica: hosp/prescriptions, hosp/transfers, icu/chartevents (.csv.gz)
+  * base de fala: Parquet com coluna de áudio e metadados
+  * captura de movimento: arquivos .amc (S01/Marker/Clean/...)
+Os valores são simulados e não têm significado clínico.
 """
 from __future__ import annotations
 

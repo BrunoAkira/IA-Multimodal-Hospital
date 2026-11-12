@@ -7,16 +7,14 @@ foi feita CORRETAMENTE (1) ou INCORRETAMENTE (0), segundo um fisioterapeuta.
 
 O que este módulo faz:
   1. Roda a estimativa de pose (OpenPose ou YOLOv8-pose) em cada vídeo escolhido
-     (os ângulos ficam em cache: rodar de novo é instantâneo).
+     (os ângulos ficam em cache em results/rehab24_angles/).
   2. Corta a série de ângulos em repetições usando o gabarito.
   3. Mede cada repetição: amplitude, ângulo máximo/mínimo, duração, velocidade,
      inclinação do tronco e movimento do lado que deveria ficar parado.
   4. Mede o quanto cada medida separa correta x incorreta (ROC-AUC) e treina uma
-     regressão logística validada "deixa uma pessoa de fora" (nunca testa em quem treinou).
+     regressão logística validada "deixa uma pessoa de fora" (teste sempre em pessoa fora do treino).
   5. Compara o nº de repetições contadas automaticamente com o gabarito.
   6. Gera relatório HTML e eventos "incorrect_execution" para a fusão.
-
-    python main.py rehab24 --exercises 1,6 --max-videos 4
 """
 from __future__ import annotations
 

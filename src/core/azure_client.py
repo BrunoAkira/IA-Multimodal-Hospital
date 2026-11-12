@@ -1,14 +1,14 @@
 """
-Cliente Azure mínimo (REST) para os DOIS serviços exigidos na entrega:
+Cliente Azure mínimo (REST) para os dois serviços de nuvem usados:
   1. Azure AI Speech  -> Speech to Text (áudio curto, até 60 s por chamada)
   2. Azure AI Language -> Sentiment Analysis + Text Analytics for health
 
-Proteções para não gastar NADA no plano gratuito (F0):
+Controle de custo no plano gratuito (F0):
   * Cache em disco: a resposta de cada áudio/texto é salva em results/cache.
     Se o mesmo conteúdo for pedido de novo, lemos do cache (zero chamadas).
   * Controle de cota: um contador mensal (results/cache/azure_usage.json)
     bloqueia chamadas antes de chegar a ~80% do limite gratuito.
-  * Sem chave configurada -> as funções retornam None e o projeto usa a
+  * Sem chave ou sem cota -> as funções retornam None e o projeto usa a
     alternativa local (o pipeline continua funcionando).
 
 Usamos REST (biblioteca `requests`) em vez dos SDKs para manter poucas dependências.

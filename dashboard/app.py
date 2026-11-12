@@ -1,7 +1,5 @@
 """
-Dashboard local (Streamlit) — lê os arquivos que o pipeline gera em results/.
-
-    streamlit run dashboard/app.py
+Painel local (Streamlit) que lê os arquivos gerados pelo pipeline em results/.
 
 Páginas: Overview | Alerts | Patient timeline | Clinical | Voice & text | Physio video | Live monitor
 """
@@ -44,7 +42,7 @@ events = load_csv("events_fused.csv", parse_dates=["timestamp"])
 vp = load_csv("virtual_patients.csv")
 
 st.sidebar.title("🏥 Hospital AI")
-st.sidebar.caption("Academic prototype — not for clinical decisions")
+st.sidebar.caption("Research prototype — not for clinical decisions")
 page = st.sidebar.radio("Page", ["Overview", "Alerts", "Patient timeline", "Clinical",
                                  "Voice & text", "Physio video", "Live monitor"])
 if st.sidebar.button("Reload results"):

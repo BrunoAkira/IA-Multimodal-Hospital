@@ -5,7 +5,7 @@ Fusão multimodal e motor de alertas.
    Os 3 datasets são de pessoas DIFERENTES. Para demonstrar a fusão, cada
    "paciente virtual" (VP001, VP002...) junta: 1 paciente do MIMIC + 1 falante do
    TORGO + 1 sujeito do UL-RED + 1 consulta (+ 1 vídeo de fisioterapia, se houver).
-   Isso é declarado no trabalho: é uma simulação de integração, não um caso real.
+   É uma simulação de integração para demonstração, não um caso clínico real.
    Os eventos de áudio/vídeo/texto (que não têm data) são posicionados no último
    dia da internação do paciente do MIMIC.
 
@@ -42,7 +42,7 @@ def build_virtual_patients(events: pd.DataFrame) -> pd.DataFrame:
         s = events.loc[events["patient_id"].str.startswith(prefix), "patient_id"]
         return sorted(s.unique())
 
-    # pacientes do MIMIC com mais eventos primeiro (casos mais interessantes na demo)
+    # pacientes da base clínica ordenados pelo número de eventos
     mimic = (events[events["patient_id"].str.startswith("mimic:")]
              .groupby("patient_id").size().sort_values(ascending=False).index.tolist())
     others = {"torgo": ids("torgo:"), "ulred": ids("ulred:"), "consult": ids("consult:"), "physio": ids("physio:"),

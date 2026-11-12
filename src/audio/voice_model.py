@@ -3,7 +3,7 @@ Modelos sobre as características de voz.
 
 1) Classificador de disartria (supervisionado, rótulos do TORGO)
    - Validação GroupKFold POR FALANTE: o modelo é sempre testado em pessoas
-     que ele nunca ouviu. Sem isso o resultado fica inflado (ele "decora" a voz).
+     que ele não ouviu no treino, o que impede que memorize a voz de cada pessoa.
 2) Indicadores de alteração vocal (não supervisionado, em relação ao próprio falante)
    - fatigue_indicator: fala mais lenta, mais monótona, mais pausas
    - breathing_indicator: mais pausas longas e voz mais soprosa (HNR menor)
