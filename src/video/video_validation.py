@@ -1,13 +1,13 @@
 """
-Avaliação do reconhecimento em vídeo REAL com o gabarito do REHAB24-6.
+Avaliação do reconhecimento em vídeo REAL com o gabarito da base de vídeos de exercícios.
 
-O REHAB24-6 traz vídeos de 10 pessoas fazendo 6 exercícios e um arquivo
+A base de vídeos de exercícios traz vídeos de 10 pessoas fazendo 6 exercícios e um arquivo
 Segmentation.csv dizendo, para cada repetição, o quadro de início/fim e se ela
 foi feita CORRETAMENTE (1) ou INCORRETAMENTE (0), segundo um fisioterapeuta.
 
 O que este módulo faz:
   1. Roda a estimativa de pose (OpenPose ou YOLOv8-pose) em cada vídeo escolhido
-     (os ângulos ficam em cache em results/rehab24_angles/).
+     (os ângulos ficam em cache em results/video_validation_angles/).
   2. Corta a série de ângulos em repetições usando o gabarito.
   3. Mede cada repetição: amplitude, ângulo máximo/mínimo, duração, velocidade,
      inclinação do tronco e movimento do lado que deveria ficar parado.
@@ -36,10 +36,10 @@ from ..core.events import Event, save_events, load_events
 from ..core.report import write_report, fig_to_b64
 from .vision import analyze_video, analyze_angles
 
-REHAB_DIR = config.DATASETS / "rehab24"
-CACHE = config.RESULTS_DIR / "rehab24_angles"
+EXERCISE_DIR = config.EXERCISE_VIDEO_DIR
+CACHE = config.RESULTS_DIR / "video_validation_angles"
 
-# exercise_id do REHAB24-6 -> nome padronizado (inglês) e articulação principal
+# exercise_id da base de vídeos de exercícios -> nome padronizado (inglês) e articulação principal
 EXERCISES = {
     1: {"name": "arm_abduction", "joint": "shoulder", "project_exercise": "arm_raise"},
     2: {"name": "arm_vw", "joint": "shoulder", "project_exercise": None},
@@ -56,9 +56,9 @@ FEATURES = ["rom", "max_angle", "min_angle", "duration_s", "mean_speed", "trunk_
 # Leitura do gabarito e dos vídeos
 # ---------------------------------------------------------------------------
 def load_segmentation() -> pd.DataFrame:
-    path = next(REHAB_DIR.rglob("Segmentation.csv"), None)
+    path = next(EXERCISE_DIR.rglob("Segmentation.csv"), None)
     if path is None:
-        raise FileNotFoundError(f"Segmentation.csv não encontrado em {REHAB_DIR}")
+        raise FileNotFoundError(f"Segmentation.csv não encontrado em {EXERCISE_DIR}")
     seg = pd.read_csv(path, sep=None, engine="python")      # o arquivo usa ';'
     seg.columns = [c.strip() for c in seg.columns]
     return seg
@@ -68,7 +68,7 @@ def find_videos(exercises: list[int], camera: str = "Camera17", max_per_exercise
     """Lista os vídeos de cada exercício (pasta Ex<n>), no máximo N por exercício."""
     out = []
     for ex in exercises:
-        files = sorted(REHAB_DIR.rglob(f"Ex{ex}/*{camera}*.mp4"))
+        files = sorted(EXERCISE_DIR.rglob(f"Ex{ex}/*{camera}*.mp4"))
         for f in files[:max_per_exercise]:
             m = re.search(r"PM_\d+", f.name)
             if m:
@@ -77,12 +77,12 @@ def find_videos(exercises: list[int], camera: str = "Camera17", max_per_exercise
 
 
 def video_angles(item: dict) -> pd.DataFrame:
-    """Ângulos quadro a quadro (com cache em results/rehab24_angles/)."""
+    """Ângulos quadro a quadro (com cache em results/video_validation_angles/)."""
     CACHE.mkdir(parents=True, exist_ok=True)
     cache = CACHE / f"{item['video_id']}_{item['path'].stem.split('-')[1]}.csv"
     if cache.exists():
         return pd.read_csv(cache)
-    print(f"[rehab24] Pose em {item['path'].name} (só pose, sem YOLO de objetos)...")
+    print(f"[video-validation] Pose em {item['path'].name} (só pose, sem YOLO de objetos)...")
     res = analyze_video(item["path"], detect_objects=False, max_seconds=600)
     res["angles"].to_csv(cache, index=False)
     return res["angles"]
@@ -187,11 +187,11 @@ def _plot_video(angles: pd.DataFrame, reps_v: pd.DataFrame, joint: str, title: s
     return fig_to_b64(fig)
 
 
-def run_rehab24(exercises: list[int], max_per_exercise: int = 4) -> dict:
+def run_video_validation(exercises: list[int], max_per_exercise: int = 4) -> dict:
     seg = load_segmentation()
     videos = find_videos(exercises, max_per_exercise=max_per_exercise)
     if not videos:
-        raise FileNotFoundError(f"Nenhum vídeo Camera17 em {REHAB_DIR}/Ex<n>/")
+        raise FileNotFoundError(f"Nenhum vídeo Camera17 em {EXERCISE_DIR}/Ex<n>/")
     all_reps, counts, plots = [], [], []
     for item in videos:
         ex = EXERCISES[item["exercise_id"]]
@@ -218,8 +218,8 @@ def run_rehab24(exercises: list[int], max_per_exercise: int = 4) -> dict:
         summary["exercises"][name] = res
         scored.append(g2)
     scored = pd.concat(scored, ignore_index=True)
-    scored.to_csv(config.RESULTS_DIR / "rehab24_repetitions.csv", index=False)
-    (config.RESULTS_DIR / "rehab24_evaluation.json").write_text(json.dumps(summary, indent=2, default=str))
+    scored.to_csv(config.RESULTS_DIR / "video_validation_repetitions.csv", index=False)
+    (config.RESULTS_DIR / "video_validation.json").write_text(json.dumps(summary, indent=2, default=str))
 
     # eventos para a fusão: repetições classificadas como incorretas
     events = []
@@ -227,12 +227,12 @@ def run_rehab24(exercises: list[int], max_per_exercise: int = 4) -> dict:
     for r in scored.itertuples():
         p = getattr(r, "p_incorrect", np.nan)
         if pd.notna(p) and p >= 0.5:
-            events.append(Event(f"rehab:{r.video_id}", (t0 + pd.Timedelta(seconds=r.first_frame / 30)).isoformat(),
-                                "video", "rehab24_execution", "incorrect_execution", float(0.4 + 0.5 * p),
+            events.append(Event(f"exercise:{r.video_id}", (t0 + pd.Timedelta(seconds=r.first_frame / 30)).isoformat(),
+                                "video", "video_validation", "incorrect_execution", float(0.4 + 0.5 * p),
                                 message=f"{r.exercise} rep {r.repetition}: execution flagged as incorrect (p={p:.2f})",
                                 evidence={"video_id": r.video_id, "rom": round(r.rom, 1),
                                           "ground_truth_correct": r.correct}))
-    kept = [e for e in load_events() if e["source"] != "rehab24_execution"]
+    kept = [e for e in load_events() if e["source"] != "video_validation"]
     from ..core.events import EVENTS_FILE
     with EVENTS_FILE.open("w", encoding="utf-8") as f:
         for e in kept:
@@ -249,7 +249,7 @@ def run_rehab24(exercises: list[int], max_per_exercise: int = 4) -> dict:
         sections.append({"heading": f"{name}: correct vs incorrect", "text": text, "table": feat})
     sections.append({"heading": "Repetition counting vs ground truth", "table": pd.DataFrame(counts)})
     sections.append({"heading": "Joint angle with ground-truth repetitions", "images": plots})
-    rp = write_report("rehab24_evaluation.html", "REHAB24-6 — real-video evaluation", sections)
+    rp = write_report("video_validation.html", "Exercise videos — real-video evaluation", sections)
     summary["report"] = str(rp)
     summary["events"] = len(events)
     return summary

@@ -239,7 +239,7 @@ def analyze_video(path: Path, target_fps: float = 5.0, max_seconds: float = 300,
                   detect_objects: bool = True) -> dict:
     """
     detect_objects=False pula o YOLOv8 de objetos/zonas (só pose): ~2x mais rápido,
-    usado na avaliação em lote do REHAB24-6.
+    usado na avaliação em lote da base de vídeos de exercícios.
     """
     from ultralytics import YOLO
 

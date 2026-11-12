@@ -42,7 +42,7 @@ def detect_transfer_events(tr: pd.DataFrame, p_threshold: float = 0.03) -> tuple
     events = []
     for hadm, g in tr.groupby("hadm_id"):
         g = g.sort_values("intime").to_dict("records")
-        pid = f"mimic:{g[0]['subject_id']}"
+        pid = f"clinical:{g[0]['subject_id']}"
         for prev, cur in zip(g[:-1], g[1:]):
             ts = pd.Timestamp(cur["intime"]).isoformat()
             p = probs[prev["careunit"]][cur["careunit"]]

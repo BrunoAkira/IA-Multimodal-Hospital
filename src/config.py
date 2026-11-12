@@ -17,9 +17,10 @@ load_dotenv(ROOT / ".env")  # lê as chaves do Azure do arquivo .env
 
 # HOSPITAL_AI_DATASETS aponta para outra pasta de dados (ex.: dados sintéticos de teste)
 DATASETS = Path(os.getenv("HOSPITAL_AI_DATASETS", ROOT / "datasets"))
-VIDEO_DIR = DATASETS / "video"          # UL-RED extraído (S01/, S02/, ...)
-AUDIO_DIR = DATASETS / "audio"          # TORGO em Parquet
-CLINICAL_DIR = DATASETS / "clinical"    # MIMIC-IV Demo (hosp/, icu/)
+CLINICAL_DIR = DATASETS / "clinical"                # base clínica de UTI (hosp/, icu/)
+SPEECH_DIR = DATASETS / "speech"                    # base de fala em Parquet
+MOCAP_DIR = DATASETS / "motion_capture"             # captura de movimento (S01/, S02/, ...)
+EXERCISE_VIDEO_DIR = DATASETS / "exercise_videos"   # vídeos de exercícios + Segmentation.csv
 
 CONSULT_DIR = ROOT / "data" / "consultations"   # roteiros .txt + gravações .wav
 PHYSIO_VIDEO_DIR = ROOT / "data" / "physio_videos"  # vídeos de fisioterapia a analisar
@@ -39,11 +40,11 @@ ALERTS_FILE = RESULTS_DIR / "alerts.csv"     # alertas finais após a fusão
 # Leitura em pedaços (controle do uso de memória)
 # ---------------------------------------------------------------------------
 CSV_CHUNK_ROWS = 200_000      # linhas por pedaço ao ler chartevents
-PARQUET_BATCH_ROWS = 32       # áudios por lote ao ler o TORGO
-MAX_TORGO_ROWS = int(os.getenv("MAX_TORGO_ROWS", "1500"))  # amostra de áudios processados
+PARQUET_BATCH_ROWS = 32       # áudios por lote ao ler a base de fala
+MAX_SPEECH_ROWS = int(os.getenv("MAX_SPEECH_ROWS", "1500"))  # amostra de áudios processados
 
 # ---------------------------------------------------------------------------
-# MIMIC-IV: itemids dos sinais vitais em icu/chartevents
+# Base clínica: itemids dos sinais vitais em icu/chartevents
 # (nomes padronizados em inglês -> lista de itemids equivalentes)
 # ---------------------------------------------------------------------------
 VITAL_ITEMIDS = {
@@ -98,8 +99,8 @@ AZURE_LANGUAGE_ENDPOINT = os.getenv("AZURE_LANGUAGE_ENDPOINT", "").rstrip("/")
 SPEECH_SECONDS_BUDGET = float(os.getenv("SPEECH_SECONDS_BUDGET", "14400"))
 # F0 Language: 5 000 registros/mês (1 registro = até 1 000 caracteres) -> máx. 4 000
 LANGUAGE_RECORDS_BUDGET = int(os.getenv("LANGUAGE_RECORDS_BUDGET", "4000"))
-# Quantos áudios do TORGO mandar para o Azure STT (o resto fica só local)
-AZURE_STT_TORGO_SAMPLES = int(os.getenv("AZURE_STT_TORGO_SAMPLES", "60"))
+# Quantos áudios da base de fala mandar para o Azure STT (o resto fica só local)
+AZURE_STT_SPEECH_SAMPLES = int(os.getenv("AZURE_STT_SPEECH_SAMPLES", "60"))
 
 LANGUAGE = "en-US"   # todos os dados são padronizados em inglês
 

@@ -102,7 +102,7 @@ def detect_vital_events(hourly: pd.DataFrame, min_score: float = 0.5) -> list[Ev
     for row in hourly.itertuples(index=False):
         r = row._asdict()
         ts = pd.Timestamp(r["charttime"]).isoformat()
-        pid = f"mimic:{r['subject_id']}"
+        pid = f"clinical:{r['subject_id']}"
         for vital in VITALS:
             v = r.get(vital)
             if v is None or pd.isna(v):
@@ -143,7 +143,7 @@ def detect_multivariate(hourly: pd.DataFrame, contamination: float = 0.01) -> tu
     events = []
     for idx in data.index[flags]:
         r = df.loc[idx]
-        events.append(Event(f"mimic:{r['subject_id']}", pd.Timestamp(r["charttime"]).isoformat(),
+        events.append(Event(f"clinical:{r['subject_id']}", pd.Timestamp(r["charttime"]).isoformat(),
                             "clinical", "vitals", "unusual_vital_pattern",
                             0.5 + 0.5 * float(r["if_score"]),
                             message="Rare combination of vital signs (IsolationForest)",
@@ -201,7 +201,7 @@ def replay(hourly: pd.DataFrame, speed_seconds: float = 0.2, on_event=print, lim
                     continue
                 score, etype, ev = det.update(r["stay_id"], vital, float(v))
                 if score >= 0.5:
-                    on_event(Event(f"mimic:{r['subject_id']}", pd.Timestamp(hour).isoformat(),
+                    on_event(Event(f"clinical:{r['subject_id']}", pd.Timestamp(hour).isoformat(),
                                    "clinical", "vitals", etype, score,
                                    message=f"{vital.replace('_', ' ')} = {v:.1f}", evidence=ev))
         time.sleep(speed_seconds)

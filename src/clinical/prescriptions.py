@@ -66,7 +66,7 @@ def detect_prescription_events(rx: pd.DataFrame, contamination: float = 0.02) ->
 
     events = []
     for r in df.to_dict("records"):
-        pid, ts = f"mimic:{r['subject_id']}", pd.Timestamp(r["starttime"]).isoformat()
+        pid, ts = f"clinical:{r['subject_id']}", pd.Timestamp(r["starttime"]).isoformat()
         boost = 0.2 if r["is_high_alert"] else 0.0   # remédio de alto risco pesa mais
         ev = {"drug": r["drug"], "route": r["route"], "daily_dose": r["daily_dose"],
               "prev_daily_dose": r["prev_daily_dose"], "ml_score": round(r["ml_score"], 3)}

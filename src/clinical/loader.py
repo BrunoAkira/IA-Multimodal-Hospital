@@ -1,7 +1,7 @@
 """
-Leitura do MIMIC-IV Demo e padronização em inglês.
+Leitura da base clínica e padronização em inglês.
 
-O MIMIC já usa nomes em inglês, mas aqui reduzimos cada tabela às colunas
+A base clínica já usa nomes em inglês, mas aqui reduzimos cada tabela às colunas
 que o projeto usa e damos nomes claros aos sinais vitais (heart_rate, spo2...).
 Tudo é lido em pedaços (chunks) para economizar memória.
 """
@@ -16,13 +16,13 @@ from .. import config
 
 
 def find_table(name: str, folder: Path = config.CLINICAL_DIR) -> Path:
-    """Procura 'name.csv' ou 'name.csv.gz' em qualquer subpasta do MIMIC."""
+    """Procura 'name.csv' ou 'name.csv.gz' em qualquer subpasta da base clínica."""
     for pattern in (f"{name}.csv.gz", f"{name}.csv"):
         hits = sorted(folder.rglob(pattern))
         if hits:
             return hits[0]
     raise FileNotFoundError(
-        f"Tabela '{name}' não encontrada em {folder}. Extraia o MIMIC-IV Demo em datasets/clinical/."
+        f"Tabela '{name}' não encontrada em {folder}. Extraia a base clínica em datasets/clinical/."
     )
 
 
@@ -103,7 +103,7 @@ def load_prescriptions() -> pd.DataFrame:
     df["drug"] = df["drug"].astype(str).str.strip().str.lower()       # nome padronizado
     df["route"] = df["route"].astype(str).str.strip().str.upper()
     df["dose"] = df["dose_val_rx"].map(_first_number)
-    # dose diária = dose x vezes por dia (quando o MIMIC informa a frequência)
+    # dose diária = dose x vezes por dia (quando a base clínica informa a frequência)
     freq = pd.to_numeric(df.get("doses_per_24_hrs"), errors="coerce")
     df["daily_dose"] = df["dose"] * freq.fillna(1)
     df = df.dropna(subset=["starttime"])

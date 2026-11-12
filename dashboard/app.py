@@ -114,10 +114,10 @@ elif page == "Patient timeline":
         fig.add_vline(x=r.timestamp, line_dash="dot", line_color=LEVEL_COLORS[r.level])
     st.plotly_chart(fig)
 
-    # sinais vitais do paciente do MIMIC por trás do paciente virtual
+    # sinais vitais do paciente da base clínica por trás do paciente virtual
     hourly = load_csv("vitals_hourly.csv", parse_dates=["charttime"])
-    src = vp.loc[vp["virtual_id"] == pid, "mimic"].iloc[0] if pid.startswith("VP") else pid
-    if src.startswith("mimic:") and not hourly.empty:
+    src = vp.loc[vp["virtual_id"] == pid, "clinical"].iloc[0] if pid.startswith("VP") else pid
+    if src.startswith("clinical:") and not hourly.empty:
         h = hourly[hourly["subject_id"] == int(src.split(":")[1])]
         vit = st.multiselect("Vitals", VITALS, default=["heart_rate", "systolic_bp", "spo2", "resp_rate"])
         fig2 = go.Figure()
@@ -131,7 +131,7 @@ elif page == "Patient timeline":
 
 # ---------------------------------------------------------------------------
 elif page == "Clinical":
-    st.title("Clinical anomalies (MIMIC-IV Demo)")
+    st.title("Clinical anomalies (ICU data)")
     s = load_json("clinical_summary.json")
     if not s:
         st.warning("Run `python main.py clinical`.")
@@ -140,14 +140,14 @@ elif page == "Clinical":
     if "injection_evaluation" in s:
         st.subheader("Detector evaluation with injected anomalies")
         st.dataframe(pd.DataFrame(s["injection_evaluation"]).T)
-        st.caption("Precision is conservative: 'false positives' include real anomalies in MIMIC.")
+        st.caption("Precision is conservative: 'false positives' include real anomalies in the clinical data.")
     ce = events[events["modality"] == "clinical"]
     st.plotly_chart(px.histogram(ce, x="event_type", color="source", title="Clinical events"),
                     )
 
 # ---------------------------------------------------------------------------
 elif page == "Voice & text":
-    st.title("Voice analysis (TORGO) and consultations")
+    st.title("Voice analysis and consultations")
     s = load_json("audio_summary.json")
     if not s:
         st.warning("Run `python main.py audio`.")
@@ -182,9 +182,9 @@ elif page == "Physio video":
     if not s:
         st.warning("Run `python main.py video`.")
         st.stop()
-    if "ulred" in s:
-        st.subheader("UL-RED repetitions vs. reference")
-        st.json(s["ulred"])
+    if "motion_capture" in s:
+        st.subheader("Motion-capture repetitions vs. reference")
+        st.json(s["motion_capture"])
         reps = load_csv("physio_repetitions.csv")
         if not reps.empty:
             st.plotly_chart(px.scatter(reps, x="duration_ratio", y="rom_ratio", color="pace_label",
@@ -208,7 +208,7 @@ elif page == "Live monitor":
     if hourly.empty:
         st.warning("Run `python main.py clinical`.")
         st.stop()
-    subj = st.selectbox("MIMIC patient", sorted(hourly["subject_id"].unique()))
+    subj = st.selectbox("ICU patient", sorted(hourly["subject_id"].unique()))
     speed = st.slider("Seconds per simulated hour", 0.05, 1.0, 0.2)
     if st.button("▶ Start"):
         h = hourly[hourly["subject_id"] == subj].sort_values("charttime")

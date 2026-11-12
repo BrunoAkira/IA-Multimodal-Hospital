@@ -1,4 +1,4 @@
-"""Orquestra o módulo de vídeo: UL-RED (movimento .amc) + vídeos .mp4 (OpenPose/YOLOv8) + relatórios."""
+"""Orquestra o módulo de vídeo: captura de movimento (.amc) + vídeos .mp4 (OpenPose/YOLOv8) + relatórios."""
 from __future__ import annotations
 
 import json
@@ -12,7 +12,7 @@ from ..core.report import write_report, fig_to_b64, file_to_b64
 from . import motion
 
 
-def _ulred_reports(df: pd.DataFrame) -> list[str]:
+def _motion_capture_reports(df: pd.DataFrame) -> list[str]:
     """Um relatório HTML por sujeito com os desvios de cada repetição."""
     paths = []
     flag_cols = ["pace_deviation", "reduced_rom", "asymmetry", "form_deviation"]
@@ -44,15 +44,15 @@ def _ulred_reports(df: pd.DataFrame) -> list[str]:
 def run_video() -> dict:
     summary, events = {}, []
 
-    # --- 1) UL-RED: arquivos .amc ---
+    # --- 1) captura de movimento: arquivos .amc ---
     try:
         reps = motion.build_repetition_table()
         scored, metrics = motion.score_repetitions(reps)
         scored.drop(columns=["_ref_curve", "_rep_curve"]).to_csv(config.RESULTS_DIR / "physio_repetitions.csv", index=False)
         events += motion.repetition_events(scored, config.RELATIVE_EPOCH)
-        summary["ulred"] = metrics
-        summary["ulred_reports"] = _ulred_reports(scored)
-        print(f"[video] UL-RED: {metrics}")
+        summary["motion_capture"] = metrics
+        summary["motion_capture_reports"] = _motion_capture_reports(scored)
+        print(f"[video] captura de movimento: {metrics}")
     except FileNotFoundError as exc:
         print(f"[video] {exc}")
 

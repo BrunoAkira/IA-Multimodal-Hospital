@@ -1,4 +1,4 @@
-"""Orquestra o módulo de áudio: TORGO (voz) + Azure STT (amostra) + consultas (texto)."""
+"""Orquestra o módulo de áudio: base de fala (voz) + Azure STT (amostra) + consultas (texto)."""
 from __future__ import annotations
 
 import json
@@ -12,7 +12,7 @@ from ..core import azure_client
 from ..core.events import Event, save_events, clear_events
 from . import consultations
 from .features import extract_features
-from .torgo_loader import iter_torgo
+from .speech_loader import iter_speech
 from .voice_model import train_dysarthria_classifier, vocal_indicators
 
 
@@ -31,12 +31,12 @@ def word_error_rate(ref: str, hyp: str) -> float:
     return d[len(h)] / len(r)
 
 
-def run_audio(torgo_rows: int = config.MAX_TORGO_ROWS) -> dict:
+def run_audio(speech_rows: int = config.MAX_SPEECH_ROWS) -> dict:
     rows, stt_rows = [], []
-    per_group_budget = {"dysarthric": config.AZURE_STT_TORGO_SAMPLES // 2,
-                        "control": config.AZURE_STT_TORGO_SAMPLES // 2}
-    print(f"[audio] Extraindo características de até {torgo_rows} falas do TORGO...")
-    for utt in iter_torgo(max_rows=torgo_rows):
+    per_group_budget = {"dysarthric": config.AZURE_STT_SPEECH_SAMPLES // 2,
+                        "control": config.AZURE_STT_SPEECH_SAMPLES // 2}
+    print(f"[audio] Extraindo características de até {speech_rows} falas da base de fala...")
+    for utt in iter_speech(max_rows=speech_rows):
         try:
             feats = extract_features(utt["audio"], utt["sr"])
         except ValueError:
@@ -55,7 +55,7 @@ def run_audio(torgo_rows: int = config.MAX_TORGO_ROWS) -> dict:
 
     df = pd.DataFrame(rows)
     if df.empty:
-        raise RuntimeError("Nenhuma fala processada. Confira o arquivo Parquet do TORGO.")
+        raise RuntimeError("Nenhuma fala processada. Confira o arquivo Parquet da base de fala.")
     df.to_csv(config.RESULTS_DIR / "voice_features.csv", index=False)
     print(f"[audio] {len(df)} falas de {df['speaker_id'].nunique()} falantes")
 
@@ -69,7 +69,7 @@ def run_audio(torgo_rows: int = config.MAX_TORGO_ROWS) -> dict:
         per_spk = clf["per_utterance"].groupby("speaker_id")["dysarthria_proba"].mean()
         for spk, p in per_spk.items():
             if p >= 0.5:
-                events.append(Event(f"torgo:{spk}", (base + timedelta(hours=9)).isoformat(), "audio",
+                events.append(Event(f"speech:{spk}", (base + timedelta(hours=9)).isoformat(), "audio",
                                     "speech_classifier", "dysarthria_risk", float(p),
                                     message=f"Speech pattern compatible with dysarthria (p={p:.2f})",
                                     evidence={"model": clf["best_model"]}))
@@ -84,17 +84,17 @@ def run_audio(torgo_rows: int = config.MAX_TORGO_ROWS) -> dict:
                                   ("breathing_index", "breathing_difficulty_indicator", "breathing difficulty")):
             val = getattr(r, col)
             if val >= 1.5:
-                events.append(Event(f"torgo:{r.speaker_id}", ts, "audio", "speech_features", etype,
+                events.append(Event(f"speech:{r.speaker_id}", ts, "audio", "speech_features", etype,
                                     min(1.0, 0.35 + 0.15 * val),
                                     message=f"Voice markers of {label} vs. speaker baseline (index {val:.1f})",
                                     evidence={"utterance_id": r.utterance_id, col: round(val, 2)}))
 
     # --- 3) Azure STT: erro de transcrição por grupo (disartria piora o reconhecimento) ---
     stt_summary = {"status": "not_run (no Azure Speech key)" if not azure_client.speech_enabled()
-                   else "not_run (AZURE_STT_TORGO_SAMPLES=0 or no utterances sent)"}
+                   else "not_run (AZURE_STT_SPEECH_SAMPLES=0 or no utterances sent)"}
     if stt_rows:
         stt_df = pd.DataFrame(stt_rows)
-        stt_df.to_csv(config.RESULTS_DIR / "torgo_azure_stt.csv", index=False)
+        stt_df.to_csv(config.RESULTS_DIR / "speech_azure_stt.csv", index=False)
         stt_summary = stt_df.groupby("group")["wer"].agg(["mean", "count"]).round(3).to_dict("index")
 
     # --- 4) consultas: STT + Text Analytics ---

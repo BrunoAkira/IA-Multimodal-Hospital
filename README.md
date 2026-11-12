@@ -4,6 +4,12 @@ O **Hospital AI** acompanha pacientes combinando quatro fontes de informação �
 clínicos, voz, texto de consultas e vídeo de fisioterapia** — e transforma tudo em **alertas
 priorizados** para a equipe de saúde, com a explicação de cada alerta.
 
+Os módulos trabalham sobre os tipos de dado que um hospital já produz: tabelas de prontuário
+(sinais vitais, prescrições, transferências), gravações de voz, áudio de consultas e vídeos de
+sessões de fisioterapia. Para demonstrar e validar o funcionamento, o repositório usa bases
+públicas como **exemplo** de cada tipo de dado (seção 4); qualquer fonte no mesmo formato pode
+substituí-las.
+
 ## O que ele faz
 
 | Área | O que detecta |
@@ -23,16 +29,16 @@ priorizados** para a equipe de saúde, com a explicação de cada alerta.
   uso mensal automático.
 - **Explicável:** cada alerta traz o motivo e os valores que o justificam (ex.: `spo2 = 88.4`,
   mediana anterior 97).
-- **Avaliado em dados reais:** em vídeos de fisioterapia com gabarito de fisioterapeuta, separa
-  agachamentos corretos de incorretos com ROC-AUC de 0,79, testando sempre em pessoas que não
-  estavam no treino.
+- **Validado com dados reais de exemplo:** em vídeos de fisioterapia com gabarito de
+  fisioterapeuta, separa agachamentos corretos de incorretos com ROC-AUC de 0,79, testando sempre
+  em pessoas que não estavam no treino.
 - **Fácil de estender:** todos os módulos produzem eventos no mesmo formato; uma nova fonte de
   dados entra nos alertas e no painel sem mudar o resto.
 
 > ⚠️ Projeto de pesquisa e demonstração. Não é um dispositivo médico e não deve orientar
 > decisões clínicas.
 
-📐 **Arquitetura detalhada:** [ARCHITECTURE.md](ARCHITECTURE.md)
+📐 **Arquitetura detalhada:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📖 **Termos técnicos:** [Glossário](#15-glossário)
 
 ### Início rápido
 
@@ -52,7 +58,7 @@ python -m streamlit run dashboard/app.py
 1. [Pré-requisitos](#1-pré-requisitos)
 2. [Instalação (passo a passo em bash)](#2-instalação-passo-a-passo-em-bash)
 3. [Primeiro teste com dados sintéticos](#3-primeiro-teste-com-dados-sintéticos)
-4. [Amostras de dados: o que são, onde baixar e onde colocar](#4-amostras-de-dados-o-que-são-onde-baixar-e-onde-colocar)
+4. [Dados de entrada](#4-dados-de-entrada)
 5. [Azure no plano gratuito](#5-azure-no-plano-gratuito)
 6. [Tutorial dos comandos](#6-tutorial-dos-comandos)
 7. [Tutorial das funções (uso direto em Python)](#7-tutorial-das-funções-uso-direto-em-python)
@@ -63,7 +69,8 @@ python -m streamlit run dashboard/app.py
 12. [Solução de problemas](#12-solução-de-problemas)
 13. [Limitações conhecidas](#13-limitações-conhecidas)
 14. [Licenças das ferramentas](#14-licenças-das-ferramentas)
-15. [Referências](#15-referências)
+15. [Glossário](#15-glossário)
+16. [Referências](#16-referências)
 
 ---
 
@@ -102,7 +109,7 @@ python -m pip --version
 | `pandas` | Tabelas (dados clínicos, características de voz, repetições) | todos os módulos |
 | `scikit-learn` | IsolationForest, regressão logística, Random Forest, validação | `clinical/`, `audio/`, `video/` |
 | `joblib` | Salvar o classificador treinado | `audio/pipeline.py` |
-| `pyarrow` | Ler a base de fala (`.parquet`) em lotes | `audio/torgo_loader.py` |
+| `pyarrow` | Ler a base de fala (`.parquet`) em lotes | `audio/speech_loader.py` |
 | `opencv-python` | Ler vídeos, rodar o OpenPose (módulo DNN), desenhar nos quadros | `video/vision.py` |
 | `ultralytics` | YOLOv8 (objetos) e YOLOv8-pose (fallback do OpenPose). Instala o PyTorch | `video/vision.py` |
 | `matplotlib` | Gráficos dos relatórios | `core/report.py`, `video/pipeline.py` |
@@ -153,7 +160,7 @@ formatos dos datasets reais (não têm valor clínico):
 source .venv/Scripts/activate
 python tests/make_sample_data.py            # cria a pasta sample_datasets/
 export HOSPITAL_AI_DATASETS=sample_datasets # usa a amostra (vale só para este terminal)
-export AZURE_STT_TORGO_SAMPLES=0            # não gasta cota do Azure com áudio sintético
+export AZURE_STT_SPEECH_SAMPLES=0            # não gasta cota do Azure com áudio sintético
 
 python main.py inspect
 python main.py all
@@ -162,71 +169,86 @@ python -m streamlit run dashboard/app.py    # abra http://localhost:8501
 
 Para voltar a usar os datasets reais:
 ```bash
-unset HOSPITAL_AI_DATASETS AZURE_STT_TORGO_SAMPLES
+unset HOSPITAL_AI_DATASETS AZURE_STT_SPEECH_SAMPLES
 ```
 
 ---
 
-## 4. Amostras de dados: o que são, onde baixar e onde colocar
+## 4. Dados de entrada
 
-O projeto foi construído e testado com quatro amostras públicas de dados, uma para cada tipo de
-informação que ele analisa, mais um conjunto de consultas escritas para o projeto. **Todos os dados
-são padronizados em inglês** (nomes de colunas, rótulos, eventos e alertas). Os nomes, links e
-licenças de cada amostra estão nas [Referências](#15-referências), no fim deste documento.
+Cada módulo lê um tipo de dado num formato definido. Qualquer fonte que siga esse formato pode
+ser usada; as bases públicas da seção 4.2 servem como exemplo e como validação. **Todos os dados
+são padronizados em inglês** (nomes de colunas, rótulos, eventos e alertas).
 
-| Amostra | O que contém | Para que é usada | O que baixar | Ref. |
+### 4.1 Formatos aceitos
+
+| Módulo | Pasta | Formato esperado |
+|---|---|---|
+| Clínico | `datasets/clinical/` | Tabelas CSV (`.csv` ou `.csv.gz`): `chartevents` (`subject_id`, `stay_id`, `charttime`, `itemid`, `valuenum`), `prescriptions` (`hadm_id`, `starttime`, `drug`, `dose_val_rx`, `route`...) e `transfers` (`hadm_id`, `careunit`, `intime`, `outtime`). Os códigos de cada sinal vital ficam em `VITAL_ITEMIDS` (`src/config.py`), ajustáveis para outro sistema hospitalar |
+| Voz | `datasets/speech/` | Arquivos `.parquet` com uma coluna de áudio (WAV), o texto falado, o id do falante e o grupo (com ou sem alteração na fala). Os nomes das colunas são reconhecidos automaticamente |
+| Consultas | `data/consultations/` | Pares `consult_XX.txt` (roteiro `Doctor: ...` / `Patient: ...`) e `consult_XX.wav` (gravação) |
+| Captura de movimento | `datasets/motion_capture/` | Arquivos `.amc` (ângulos das articulações por quadro), nomeados `{Movimento}R{repetições}S{sujeito}.amc`: `R1` = repetição de referência, `R3` = três repetições a avaliar |
+| Vídeo de fisioterapia | `data/physio_videos/` | Vídeos `.mp4`, `.avi`, `.mov` ou `.mkv`; o prefixo do nome define o exercício (tabela abaixo) |
+| Vídeos com gabarito | `datasets/exercise_videos/` | Vídeos em `Ex<n>/` + um `Segmentation.csv` (separado por `;`) com `video_id`, `repetition_number`, `exercise_id`, `person_id`, `first_frame`, `last_frame`, `exercise_subtype` e `correctness` (1 = correta, 0 = incorreta) |
+
+### 4.2 Bases de exemplo usadas na validação
+
+| Base de exemplo | O que contém | O que demonstra | O que baixar | Ref. |
 |---|---|---|---|---|
-| **Base clínica de UTI** | Registros desidentificados de 100 pacientes internados: sinais vitais medidos à beira do leito, prescrições de medicamentos e transferências entre setores do hospital | Detecção de anomalias em sinais vitais, prescrições e movimentação do paciente | O ZIP completo (~15 MB) | [1] |
-| **Base de fala** | Gravações em inglês de pessoas com disartria (dificuldade na fala de origem neurológica) e de pessoas sem alteração, com o texto que cada uma leu | Análise de voz: disartria, cansaço e dificuldade respiratória; teste da transcrição | **1** arquivo `.parquet` (~370 MB) basta | [2] |
-| **Base de captura de movimento** | Ângulos das articulações de 10 pessoas fazendo 22 exercícios de reabilitação, cada um em ritmo normal, rápido e lento | Movimento fora do padrão, comparando cada repetição com a execução de referência | 1 a 3 participantes (`S01.zip`...) | [3] |
-| **Base de vídeos de exercícios** | Vídeos coloridos de 10 pessoas fazendo 6 exercícios de fisioterapia, com cada repetição marcada por um fisioterapeuta como correta ou incorreta | Reconhecimento de postura em vídeo real (OpenPose/YOLOv8) e avaliação de execução incorreta | `videos.zip`, `Segmentation.csv`, `Segmentation.txt` | [4] |
-| **Consultas** | 12 roteiros de consulta em inglês, escritos para o projeto, com sintomas, termos críticos e tons diferentes | Transcrição (Speech to Text) e análise de texto (termos críticos e sentimento) | já incluídos em `data/consultations/` | — |
+| **Base clínica de UTI** | Registros desidentificados de 100 pacientes internados: sinais vitais, prescrições e transferências entre setores | Detecção de anomalias em sinais vitais, prescrições e movimentação do paciente | O ZIP completo (~15 MB) | [1] |
+| **Base de fala** | Gravações em inglês de pessoas com disartria (dificuldade na fala de origem neurológica) e sem alteração, com o texto lido | Análise de voz (disartria, cansaço, respiração) e qualidade da transcrição | **1** arquivo `.parquet` (~370 MB) | [2] |
+| **Base de captura de movimento** | Ângulos das articulações de 10 pessoas em 22 exercícios de reabilitação, cada um em ritmo normal, rápido e lento | Movimento fora do padrão em relação à execução de referência | 1 a 3 participantes (`S01.zip`...) | [3] |
+| **Base de vídeos de exercícios** | Vídeos de 10 pessoas em 6 exercícios de fisioterapia, cada repetição marcada por fisioterapeuta como correta ou incorreta | Postura em vídeo real (OpenPose/YOLOv8) e detecção de execução incorreta | `videos.zip`, `Segmentation.csv`, `Segmentation.txt` | [4] |
+| **Consultas** | 12 roteiros de consulta em inglês escritos para o projeto, com sintomas, termos críticos e tons diferentes | Transcrição (Speech to Text) e análise de texto | já incluídos em `data/consultations/` | — |
 
-### Estrutura final das pastas
+Nomes, autores, links e licenças estão nas [Referências](#16-referências).
+
+### 4.3 Estrutura das pastas
 
 ```
 datasets/
   clinical/
     hosp/  prescriptions.csv.gz, transfers.csv.gz, ...   <- base clínica de UTI [1]
     icu/   chartevents.csv.gz, ...
-  audio/
-    train-00000-of-00004.parquet   <- base de fala [2]
-  video/
-    S01/ S02/ ...                  <- base de captura de movimento [3]
-  rehab24/                         <- base de vídeos de exercícios [4] (vídeos + Segmentation.csv)
+  speech/
+    train-00000-of-00004.parquet                         <- base de fala [2]
+  motion_capture/
+    S01/ S02/ ...                                        <- base de captura de movimento [3]
+  exercise_videos/
+    Ex1/ ... Ex6/  Segmentation.csv                      <- base de vídeos de exercícios [4]
 data/
   consultations/  consult_01.txt ... consult_12.txt  (+ consult_XX.wav)
-  physio_videos/  squat_....mp4, arm_raise_....mp4   <- vídeos que serão analisados
+  physio_videos/  squat_....mp4, arm_raise_....mp4   <- vídeos a analisar
 ```
 
-### Comandos para organizar (bash)
+### 4.4 Organizando as bases de exemplo (bash)
 
 ```bash
-mkdir -p datasets/clinical datasets/audio datasets/video datasets/rehab24
+mkdir -p datasets/clinical datasets/speech datasets/motion_capture datasets/exercise_videos
 
 # Base clínica de UTI [1] (o Python extrai o zip; o Git Bash nem sempre tem unzip)
 python -m zipfile -e ~/Downloads/mimic-iv-clinical-database-demo-2.2.zip /tmp/clinica
 cp -r /tmp/clinica/*/hosp /tmp/clinica/*/icu datasets/clinical/
 
 # Base de fala [2]
-cp ~/Downloads/train-00000-of-00004.parquet datasets/audio/
+cp ~/Downloads/train-00000-of-00004.parquet datasets/speech/
 
 # Base de captura de movimento [3] (repita para S02, S03...)
-python -m zipfile -e ~/Downloads/S01.zip datasets/video/
+python -m zipfile -e ~/Downloads/S01.zip datasets/motion_capture/
 
 # Base de vídeos de exercícios [4]
-python -m zipfile -e ~/Downloads/videos.zip datasets/rehab24/
-cp ~/Downloads/Segmentation.csv ~/Downloads/Segmentation.txt datasets/rehab24/
+python -m zipfile -e ~/Downloads/videos.zip datasets/exercise_videos/
+cp ~/Downloads/Segmentation.csv ~/Downloads/Segmentation.txt datasets/exercise_videos/
 
 python main.py inspect      # confere tudo
 ```
 > Os nomes dos zips são exemplos: use os nomes dos arquivos que você baixou.
 
-### Vídeos para o OpenPose / YOLOv8 (`data/physio_videos/`)
+### 4.5 Vídeos de fisioterapia (`data/physio_videos/`)
 
-A base de captura de movimento **não tem vídeo de pessoas** (os `.avi` dela mostram só o
-esqueleto desenhado), então o reconhecimento visual roda em vídeos reais: da base de vídeos de
-exercícios [4] ou gravados por você.
+O reconhecimento visual (OpenPose/YOLOv8) roda sobre vídeos de pessoas: gravações de sessões de
+fisioterapia, da base de vídeos de exercícios [4] ou feitas com o celular. A base de captura de
+movimento [3] não serve aqui, porque seus vídeos mostram só o esqueleto desenhado.
 
 - Formatos aceitos: `.mp4`, `.avi`, `.mov`, `.mkv`.
 - **O nome do arquivo começa pelo exercício**, para o sistema saber a amplitude esperada:
@@ -242,14 +264,14 @@ exercícios [4] ou gravados por você.
 
 Exemplo:
 ```bash
-cp "datasets/rehab24/CAMINHO/DO/VIDEO.mp4" data/physio_videos/squat_rehab_01.mp4
+cp "datasets/exercise_videos/CAMINHO/DO/VIDEO.mp4" data/physio_videos/squat_rehab_01.mp4
 ```
 
 **Para gravar com o celular:** câmera parada, corpo inteiro no quadro, 15–30 s, 5 repetições.
 Sugestão: um vídeo correto e outro incorreto de propósito (agachando pouco, um lado mais baixo),
 e um com um objeto no chão (garrafa, mochila) para testar a área de risco de queda.
 
-### Áudio das consultas (`data/consultations/`)
+### 4.6 Áudio das consultas (`data/consultations/`)
 
 Há 12 roteiros em inglês (`consult_01.txt` ... `consult_12.txt`). Grave a leitura de cada roteiro
 (celular ou microfone, em WAV) e salve como `consult_XX.wav` na mesma pasta: é esse áudio que
@@ -319,7 +341,7 @@ Sempre a partir da pasta do projeto, com o ambiente ativo (`source .venv/Scripts
 | `python main.py clinical` | Anomalias clínicas (sinais vitais, prescrições, transferências) |
 | `python main.py audio` | Voz + consultas (Speech to Text + Text Analytics) |
 | `python main.py video` | Captura de movimento + vídeos (OpenPose/YOLOv8) + relatórios |
-| `python main.py rehab24` | Avaliação em vídeo real contra o gabarito do fisioterapeuta (correta x incorreta) |
+| `python main.py video-validation` | Mede a precisão da análise de vídeo contra o gabarito do fisioterapeuta (correta x incorreta) |
 | `python main.py fusion` | Pacientes virtuais + fusão + alertas |
 | `python main.py all` | `clinical` → `audio` → `video` → `fusion` |
 | `python main.py monitor` | Simulação de tempo real dos sinais vitais no terminal |
@@ -377,7 +399,7 @@ O que acontece:
    `models/dysarthria_classifier.joblib`.
 3. **Indicadores de cansaço e de dificuldade respiratória**, comparando cada fala com a linha de
    base do próprio falante.
-4. **Azure Speech to Text** numa amostra da base de fala (`AZURE_STT_TORGO_SAMPLES`, padrão 60),
+4. **Azure Speech to Text** numa amostra da base de fala (`AZURE_STT_SPEECH_SAMPLES`, padrão 60),
    calculando a taxa de erro de palavras (WER) por grupo.
 5. **Consultas:** `.wav` → Azure Speech to Text → Azure Text Analytics for health (termos
    críticos e negação, ex.: "no fever") + sentimento.
@@ -386,7 +408,7 @@ Eventos: `dysarthria_risk`, `fatigue_indicator`, `breathing_difficulty_indicator
 `critical_term_mentioned`, `negative_sentiment`.
 
 Saídas: `results/audio_summary.json`, `voice_features.csv`, `voice_indicators.csv`,
-`consultations.json`, `torgo_azure_stt.csv` (se o Speech estiver ativo).
+`consultations.json`, `speech_azure_stt.csv` (se o Speech estiver ativo).
 
 Conferir se o Azure foi usado:
 ```bash
@@ -406,7 +428,7 @@ EOF
 python main.py video
 ```
 
-**Parte 1 — captura de movimento (`datasets/video/`):** compara as 3 repetições de cada arquivo `R3`
+**Parte 1 — captura de movimento (`datasets/motion_capture/`):** compara as 3 repetições de cada arquivo `R3`
 (ritmo normal, rápido e lento) com a repetição de referência do arquivo `R1`:
 
 | Medida | Significado |
@@ -449,15 +471,17 @@ ZONES = {
 }
 ```
 
-### 6.4b `rehab24` — avaliação em vídeo real com gabarito
+### 6.4b `video-validation` — validação da análise de vídeo
 
 ```bash
-python main.py rehab24                                  # exercícios 1 e 6, até 4 vídeos cada
-python main.py rehab24 --exercises 1,5,6 --max-videos 6
+python main.py video-validation                                  # exercícios 1 e 6, até 4 vídeos cada
+python main.py video-validation --exercises 1,5,6 --max-videos 6
 ```
 
-Usa os vídeos `datasets/rehab24/Ex<n>/PM_xxx-Camera17-30fps.mp4` e o `Segmentation.csv`
-(não precisa copiar nada para `data/physio_videos/`).
+Mede se o sistema reconhece execuções incorretas, comparando cada repetição com a marcação de
+um fisioterapeuta. Lê os vídeos em `datasets/exercise_videos/Ex<n>/` (câmera `Camera17` no nome do
+arquivo) e o gabarito `Segmentation.csv` (formato na seção 4.1). Na base de exemplo [4], os ids
+de exercício são:
 
 | Id | Exercício | Articulação analisada |
 |---|---|---|
@@ -470,14 +494,14 @@ Usa os vídeos `datasets/rehab24/Ex<n>/PM_xxx-Camera17-30fps.mp4` e o `Segmentat
 
 O que faz:
 1. Roda só a estimativa de pose (sem o YOLOv8 de objetos, ~2x mais rápido) e guarda os
-   ângulos em `results/rehab24_angles/` (rodar de novo é instantâneo).
+   ângulos em `results/video_validation_angles/` (rodar de novo é instantâneo).
 2. Corta cada vídeo nas repetições do gabarito e mede: amplitude, ângulo máximo e mínimo,
    duração, velocidade, inclinação do tronco e movimento do lado que deveria ficar parado.
 3. Mostra o quanto cada medida, sozinha, separa correta de incorreta (`single_feature_auc`:
    0,5 = acaso, 1,0 = perfeito) e treina uma regressão logística validada deixando uma pessoa
    de fora por vez.
 4. Compara o número de repetições contadas automaticamente com o gabarito.
-5. Gera `results/reports/rehab24_evaluation.html` (gráfico de cada vídeo com as repetições
+5. Gera `results/reports/video_validation.html` (gráfico de cada vídeo com as repetições
    corretas em verde e incorretas em vermelho) e eventos `incorrect_execution` para a fusão.
 
 Tempo: cerca de 1 a 2 minutos por vídeo na primeira vez.
@@ -567,7 +591,7 @@ Rode os exemplos a partir da pasta do projeto, com o ambiente ativo. Os blocos
 ```bash
 python - <<'EOF'
 from src.core.events import Event, save_events, load_events
-ev = Event(patient_id="mimic:10000032", timestamp="2150-01-01T10:00:00",
+ev = Event(patient_id="clinical:10000032", timestamp="2150-01-01T10:00:00",
            modality="clinical", source="vitals", event_type="spo2_low",
            score=0.85, message="spo2 = 86.0")
 print(ev.severity)            # "high" (calculado a partir do score)
@@ -631,7 +655,7 @@ EOF
 
 | Função | O que faz |
 |---|---|
-| `torgo_loader.iter_torgo(max_rows=...)` | Gera as falas da base de fala uma a uma: `{speaker_id, group, prompt, audio, sr, ...}` |
+| `speech_loader.iter_speech(max_rows=...)` | Gera as falas da base de fala uma a uma: `{speaker_id, group, prompt, audio, sr, ...}` |
 | `features.extract_features(audio, sr)` | Dicionário com ~28 características da voz |
 | `voice_model.train_dysarthria_classifier(df)` | Treina e valida por falante; retorna métricas e modelo |
 | `voice_model.vocal_indicators(df)` | `fatigue_index` e `breathing_index` por fala |
@@ -669,7 +693,7 @@ EOF
 | Função | O que faz |
 |---|---|
 | `amc.parse_amc(caminho)` | Lê um `.amc` → DataFrame (quadros × ângulos) |
-| `amc.index_ulred()` | Lista os `.amc` com participante, movimento e nº de repetições |
+| `amc.index_motion_capture()` | Lista os `.amc` com participante, movimento e nº de repetições |
 | `motion.build_repetition_table()` | Medidas de cada repetição vs. referência |
 | `motion.score_repetitions(df)` | Regras + IsolationForest → pontuação e métricas |
 | `motion.dtw_distance(a, b)` | Distância DTW entre duas curvas |
@@ -693,8 +717,8 @@ EOF
 Exemplo — ler um arquivo de captura de movimento:
 ```bash
 python - <<'EOF'
-from src.video.amc import index_ulred, parse_amc
-idx = index_ulred()
+from src.video.amc import index_motion_capture, parse_amc
+idx = index_motion_capture()
 print(idx.head())
 df = parse_amc(idx.iloc[0]["path"])
 print(df.shape, list(df.columns)[:8])
@@ -722,8 +746,8 @@ Coloque no `.env` ou use `export NOME=valor` no terminal (vale só para aquele t
 | `AZURE_LANGUAGE_KEY` / `AZURE_LANGUAGE_ENDPOINT` | vazio | Azure Language |
 | `SPEECH_SECONDS_BUDGET` | `14400` | Limite de segurança do Speech (segundos/mês) |
 | `LANGUAGE_RECORDS_BUDGET` | `4000` | Limite de segurança do Language (registros/mês) |
-| `AZURE_STT_TORGO_SAMPLES` | `60` | Quantas falas da base de fala vão para o Speech to Text (`0` desliga) |
-| `MAX_TORGO_ROWS` | `1500` | Quantas falas da base de fala processar |
+| `AZURE_STT_SPEECH_SAMPLES` | `60` | Quantas falas da base de fala vão para o Speech to Text (`0` desliga) |
+| `MAX_SPEECH_ROWS` | `1500` | Quantas falas da base de fala processar |
 | `HOSPITAL_AI_DATASETS` | `datasets` | Pasta dos datasets (ex.: `sample_datasets`) |
 
 Limiares e listas (limites clínicos, medicamentos de alto risco, pesos da fusão, janela, cooldown)
@@ -744,7 +768,7 @@ Tudo vai para `results/` (pode apagar a pasta para recomeçar do zero):
 | `clinical_summary.json`, `audio_summary.json`, `video_summary.json`, `fusion_summary.json` | Métricas de cada módulo |
 | `vitals_hourly.csv` | Sinais vitais por hora (usado no dashboard e no monitor) |
 | `voice_features.csv`, `voice_indicators.csv` | Características e índices de voz por fala |
-| `torgo_azure_stt.csv` | Transcrições do Azure + WER por fala |
+| `speech_azure_stt.csv` | Transcrições do Azure + WER por fala |
 | `consultations.json` | Transcrição, sentimento e termos de cada consulta |
 | `physio_repetitions.csv` | Medidas e pontuação de cada repetição da captura de movimento |
 | `video_angles_<nome>.csv` | Ângulos quadro a quadro de cada vídeo |
@@ -762,8 +786,8 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 |---|---|
 | Postura e ângulos em vídeo (OpenPose / YOLOv8-pose) | `src/video/vision.py` → `PoseEstimator`, `frame_angles` |
 | Objetos e áreas críticas (YOLOv8) | `src/video/vision.py` → `analyze_video`, `ZONES` |
-| Movimento fora do padrão e execução incorreta | `src/video/motion.py`, `analyze_angles`, `src/video/rehab24.py` |
-| Relatórios automáticos de fisioterapia | `results/reports/physio_*.html`, `video_*.html`, `rehab24_evaluation.html` |
+| Movimento fora do padrão e execução incorreta | `src/video/motion.py`, `analyze_angles`, `src/video/video_validation.py` |
+| Relatórios automáticos de fisioterapia | `results/reports/physio_*.html`, `video_*.html`, `video_validation.html` |
 | Alterações na voz (disartria, cansaço, respiração) | `src/audio/features.py`, `src/audio/voice_model.py` |
 | Transcrição de consultas (Azure Speech to Text) | `src/core/azure_client.py` → `speech_to_text` |
 | Termos críticos e sentimento (Azure AI Language) | `src/audio/text_analysis.py`, `azure_client.analyze_health` |
@@ -782,7 +806,7 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | Sinais vitais | Injeção de anomalias artificiais → precisão e recall | `clinical_summary.json` |
 | Voz | Classificador validado em falantes nunca vistos (`GroupKFold`) → acurácia, F1, ROC-AUC | `audio_summary.json` |
 | Captura de movimento | Ritmo rápido/lento como rótulo → ROC-AUC e recall | `video_summary.json` |
-| Speech to Text | WER em fala com e sem disartria | `audio_summary.json`, `torgo_azure_stt.csv` |
+| Speech to Text | WER em fala com e sem disartria | `audio_summary.json`, `speech_azure_stt.csv` |
 
 > Com os **dados de amostra** as métricas saem altas (ex.: acurácia 1,0), porque os dados
 > sintéticos são fáceis. **Resultados representativos vêm dos datasets reais.**
@@ -797,10 +821,10 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | `streamlit: command not found` | Ative o ambiente e use `python -m streamlit run dashboard/app.py` |
 | `(.venv)` não aparece | Cada terminal novo precisa de `source .venv/Scripts/activate` |
 | `python: command not found` ou abre a Microsoft Store | Reinstale o Python marcando "Add python.exe to PATH" e reabra o terminal |
-| Projeto usa a amostra sem querer | `unset HOSPITAL_AI_DATASETS` |
+| Projeto usa os dados sintéticos sem querer | `unset HOSPITAL_AI_DATASETS` |
 | `Tabela 'chartevents' não encontrada` | As pastas `hosp/` e `icu/` devem estar dentro de `datasets/clinical/` |
-| `Nenhum .parquet do TORGO` (base de fala) | Coloque o `.parquet` direto em `datasets/audio/` |
-| `Nenhum .amc do UL-RED` (captura de movimento) | Extraia os zips dentro de `datasets/video/` (devem aparecer `S01/`, `S02/`...) |
+| `Nenhum .parquet da base de fala` | Coloque o `.parquet` direto em `datasets/speech/` |
+| `Nenhum .amc da captura de movimento` | Extraia os zips dentro de `datasets/motion_capture/` (devem aparecer `S01/`, `S02/`...) |
 | Vídeo com 0 quadros analisados | O OpenCV não reconhece o formato do arquivo: exporte o vídeo novamente em MP4 (H.264) |
 | `pose_visible_fraction` muito baixo | O vídeo não mostra uma pessoa real ou o corpo está cortado |
 | `Estimador de pose: yolov8-pose` | O OpenPose não foi baixado (servidor da CMU fora do ar). Funciona igual; para usar o OpenPose, coloque `pose_iter_440000.caffemodel` em `models/openpose/` |
@@ -813,7 +837,8 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 
 ## 13. Limitações conhecidas
 
-- Os datasets são de pessoas diferentes: a fusão usa **pacientes virtuais** (simulação declarada).
+- As bases de exemplo são de pessoas diferentes: para demonstrar a fusão, cada **paciente virtual**
+  combina registros de bases distintas. Com dados de um mesmo paciente, a fusão usa o id real.
 - Cansaço e dificuldade respiratória são **indicadores** relativos ao próprio falante, sem
   rótulo clínico.
 - Jitter e shimmer são aproximações por quadro, não o cálculo ciclo a ciclo do Praat.
@@ -833,11 +858,47 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 
 ---
 
-## 15. Referências
+## 15. Glossário
 
-### Amostras de dados
+| Termo | O que é | Onde aparece no projeto |
+|---|---|---|
+| **Alerta (medium / high / critical)** | Aviso para a equipe, gerado quando os eventos de um paciente somam risco suficiente. *Critical* exige dois ou mais tipos de dado alterados ao mesmo tempo | Central de alertas, painel |
+| **Evento** | Registro padronizado de algo detectado (paciente, horário, tipo de dado, pontuação 0–1, explicação). É a "língua comum" entre os módulos | Todos os módulos |
+| **Paciente virtual (VP001...)** | Combinação de registros de bases de exemplo diferentes num só paciente, para demonstrar a fusão. Com dados de um mesmo paciente real, não é necessário | Fusão |
+| **Cooldown** | Tempo mínimo (6 h) antes de repetir o mesmo alerta para o mesmo paciente, a menos que piore | Central de alertas |
+| **NEWS2** | *National Early Warning Score 2*: escore de alerta precoce que soma pontos para frequência cardíaca, pressão, saturação, respiração e temperatura fora do normal | Sinais vitais |
+| **z-score robusto** | Quanto um valor se afasta do normal da própria pessoa, usando mediana e MAD em vez de média e desvio-padrão | Sinais vitais, índices de voz |
+| **MAD** | *Median Absolute Deviation*: medida de variação baseada na mediana, pouco afetada por valores extremos | Sinais vitais, índices de voz |
+| **Isolation Forest** | Modelo que encontra casos raros sem exemplos rotulados: o que fica isolado com poucos cortes aleatórios é anomalia | Sinais vitais, prescrições, repetições de exercício |
+| **Cadeia de Markov** | Probabilidade de passar de um estado a outro; aqui, de um setor do hospital a outro | Transferências |
+| **Regressão logística (LogReg)** | Modelo de classificação que dá a probabilidade de um caso pertencer a uma classe | Voz (disartria), vídeo (correto × incorreto) |
+| **Random Forest (RF)** | Conjunto de árvores de decisão que votam na resposta | Voz (disartria) |
+| **GroupKFold / deixa uma pessoa de fora** | Validação em que o modelo é sempre testado em pessoas que não estavam no treino, para não "decorar" quem já viu | Voz, vídeo |
+| **ROC-AUC** | Nota de 0 a 1 de quanto um modelo separa duas classes: 0,5 é acaso, 1,0 é perfeito | Resultados de voz e vídeo |
+| **Precisão / Recall** | Recall: quanto das anomalias reais foi encontrado. Precisão: quanto dos alertas era anomalia de verdade | Avaliação dos sinais vitais |
+| **Disartria** | Dificuldade na fala de origem neurológica (ex.: após AVC), com fala lenta, arrastada ou instável | Análise de voz |
+| **F0** | Frequência fundamental: o tom da voz | Características de voz |
+| **Jitter / Shimmer** | Pequenas variações de tom (jitter) e de volume (shimmer) entre ciclos da voz; altos em vozes instáveis | Características de voz |
+| **HNR** | *Harmonics-to-Noise Ratio*: quanto a voz é "limpa" em relação ao ruído; baixo em voz rouca ou soprosa | Características de voz |
+| **MFCC** | Coeficientes que resumem o timbre da voz, muito usados em reconhecimento de fala | Classificador de voz |
+| **WER** | *Word Error Rate*: proporção de palavras erradas numa transcrição | Qualidade do Speech to Text |
+| **Speech to Text** | Serviço do Azure que transforma áudio em texto | Consultas, base de fala |
+| **Text Analytics for health** | Serviço do Azure que encontra sintomas, medicamentos e diagnósticos num texto e indica se foram negados | Consultas |
+| **Negação (assertion)** | Marcação de que um termo foi negado pelo paciente (ex.: "no fever") e não deve gerar alerta | Consultas |
+| **OpenPose** | Modelo de visão que encontra os pontos do corpo (ombros, cotovelos, joelhos...) numa imagem | Vídeo |
+| **YOLOv8 / YOLOv8-pose** | Modelos de visão que detectam pessoas e objetos (YOLOv8) e os pontos do corpo (YOLOv8-pose) | Vídeo |
+| **Amplitude de movimento (ROM)** | Diferença entre o maior e o menor ângulo de uma articulação durante a repetição | Vídeo, captura de movimento |
+| **DTW** | *Dynamic Time Warping*: compara a forma de duas curvas mesmo quando uma é mais rápida | Captura de movimento |
+| **Captura de movimento (.amc)** | Registro dos ângulos das articulações feito com sensores ou marcadores no corpo | Captura de movimento |
+| **Plano F0** | Plano gratuito dos serviços do Azure, com limite mensal de uso | Azure |
 
-| # | Amostra (como chamada neste README) | Nome original e fonte | Licença |
+---
+
+## 16. Referências
+
+### Bases de dados de exemplo
+
+| # | Base (como chamada neste README) | Nome original e fonte | Licença |
 |---|---|---|---|
 | [1] | Base clínica de UTI | **MIMIC-IV Clinical Database Demo v2.2** — Johnson, A. et al., PhysioNet. https://physionet.org/content/mimic-iv-demo/2.2/ | Open Data Commons ODbL v1.0 |
 | [2] | Base de fala | **TORGO Database** — Rudzicz, F., Namasivayam, A. K., Wolff, T., University of Toronto. Cópia em Parquet: https://huggingface.co/datasets/abnerh/TORGO-database | Conforme os autores (verificar antes de redistribuir) |

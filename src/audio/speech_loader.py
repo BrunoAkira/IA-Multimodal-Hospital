@@ -1,5 +1,5 @@
 """
-Leitura do TORGO (Parquet do Hugging Face) em lotes pequenos e padronização em inglês.
+Leitura da base de fala (Parquet do Hugging Face) em lotes pequenos e padronização em inglês.
 
 Saída padronizada de cada fala:
     utterance_id, speaker_id, group ("dysarthric" | "control"), gender, prompt, audio, sr
@@ -40,7 +40,7 @@ def decode_audio(value) -> tuple[np.ndarray, int]:
     raw = value.get("bytes") if isinstance(value, dict) else value
     if raw is None and isinstance(value, dict) and value.get("array") is not None:
         return np.asarray(value["array"], dtype=np.float32), int(value["sampling_rate"])
-    from scipy.io import wavfile          # o TORGO guarda o áudio em WAV
+    from scipy.io import wavfile          # a base de fala guarda o áudio em WAV
     sr, y = wavfile.read(io.BytesIO(raw))
     y = np.asarray(y)
     if np.issubdtype(y.dtype, np.integer):
@@ -51,7 +51,7 @@ def decode_audio(value) -> tuple[np.ndarray, int]:
 
 
 def _speaker_from_path(path: str) -> str | None:
-    """No TORGO o id do falante aparece no caminho (F01, M03, FC02, MC01...)."""
+    """Na base de fala o id do falante aparece no caminho (F01, M03, FC02, MC01...)."""
     m = re.search(r"\b([FM]C?\d{2})\b", str(path).replace("/", " ").replace("_", " "))
     return m.group(1) if m else None
 
@@ -62,19 +62,19 @@ def _group(status, speaker: str | None) -> str:
         return "dysarthric"
     if any(k in s for k in ("healthy", "control", "normal", "0", "false", "non")):
         return "control"
-    # sem rótulo: no TORGO, ids com "C" (FC01, MC02) são controles
+    # sem rótulo: na base de fala, ids com "C" (FC01, MC02) são controles
     if speaker:
         return "control" if "C" in speaker[1:] else "dysarthric"
     return "unknown"
 
 
-def iter_torgo(path: Path | None = None, max_rows: int = config.MAX_TORGO_ROWS):
+def iter_speech(path: Path | None = None, max_rows: int = config.MAX_SPEECH_ROWS):
     """Gera falas padronizadas uma a uma (generator: não carrega tudo na memória)."""
     import pyarrow.parquet as pq
 
-    files = [path] if path else sorted(config.AUDIO_DIR.glob("*.parquet"))
+    files = [path] if path else sorted(config.SPEECH_DIR.glob("*.parquet"))
     if not files:
-        raise FileNotFoundError(f"Nenhum .parquet do TORGO em {config.AUDIO_DIR}")
+        raise FileNotFoundError(f"Nenhum .parquet da base de fala em {config.SPEECH_DIR}")
     n = 0
     for f in files:
         pf = pq.ParquetFile(f)
@@ -94,7 +94,7 @@ def iter_torgo(path: Path | None = None, max_rows: int = config.MAX_TORGO_ROWS):
                     print(f"[audio] fala ignorada ({exc})")
                     continue
                 yield {
-                    "utterance_id": f"torgo_{n:05d}",
+                    "utterance_id": f"speech_{n:05d}",
                     "speaker_id": str(spk or "unknown"),
                     "group": _group(row.get(c["status"]) if c["status"] else None, spk),
                     "gender": str(row.get(c["gender"], "")).lower() if c["gender"] else "",

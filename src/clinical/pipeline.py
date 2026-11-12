@@ -1,4 +1,4 @@
-"""Orquestra o módulo clínico: carrega o MIMIC, roda os 3 detectores e salva tudo."""
+"""Orquestra o módulo clínico: carrega a base clínica, roda os 3 detectores e salva tudo."""
 from __future__ import annotations
 
 import json

@@ -1,6 +1,7 @@
 # Arquitetura — Hospital AI
 
-Como o sistema é organizado, em linguagem simples. Para instalar e usar, veja o [README](README.md).
+Como o sistema é organizado, em linguagem simples. Para instalar e usar, veja o [README](README.md);
+para o significado dos termos técnicos (NEWS2, Isolation Forest, DTW...), veja o [Glossário](README.md#15-glossário).
 
 ---
 
@@ -25,7 +26,24 @@ flowchart LR
 
 ---
 
-## 2. Os módulos
+## 2. De onde vêm os dados
+
+O sistema foi pensado para os dados que um hospital já produz. Cada módulo lê um formato definido;
+qualquer fonte nesse formato pode ser conectada.
+
+| Tipo de dado | No hospital | Formato lido pelo sistema | Base de exemplo usada na validação |
+|---|---|---|---|
+| Sinais clínicos | Prontuário eletrônico: sinais vitais, prescrições, transferências | Tabelas CSV | Base clínica de UTI desidentificada |
+| Voz | Gravações de voz do paciente | Áudio WAV com o texto falado | Base de fala com e sem disartria |
+| Consultas | Áudio das consultas | WAV + roteiro | 12 consultas roteirizadas |
+| Fisioterapia | Câmeras na sala de fisioterapia ou sensores de movimento | Vídeo (MP4, AVI...) ou captura de movimento (`.amc`) | Base de vídeos de exercícios com gabarito de fisioterapeuta e base de captura de movimento |
+
+As bases de exemplo servem para demonstrar e medir o funcionamento; os formatos e as referências
+completas estão no [README](README.md) (seções 4 e 16).
+
+---
+
+## 3. Os módulos
 
 ### Análise clínica
 
@@ -82,7 +100,7 @@ flowchart LR
 
 ---
 
-## 3. O evento: a "língua comum" dos módulos
+## 4. O evento: a "língua comum" dos módulos
 
 Tudo o que um módulo encontra vira um evento com os mesmos campos:
 
@@ -101,7 +119,7 @@ sem mexer no resto.
 
 ---
 
-## 4. Central de alertas
+## 5. Central de alertas
 
 ```mermaid
 flowchart LR
@@ -114,12 +132,15 @@ flowchart LR
 - Quanto mais tipos de dado alterados ao mesmo tempo, maior o risco. Os dados clínicos pesam mais,
   por serem a medida mais direta do estado do paciente.
 - O mesmo alerta não se repete antes de 6 h, a menos que a situação piore.
+- Com as bases de exemplo, que são de pessoas diferentes, cada "paciente virtual" (`VP001`...)
+  combina registros de bases distintas para demonstrar a fusão. Com dados reais de um mesmo
+  paciente, a fusão usa o id do próprio paciente.
 - Cada alerta traz a ação sugerida: **critical** → avaliação imediata; **high** → avaliação à beira
   do leito em até 1 h; **medium** → revisão na próxima visita.
 
 ---
 
-## 5. Uso do Azure
+## 6. Uso do Azure
 
 ```mermaid
 flowchart LR
@@ -137,7 +158,7 @@ flowchart LR
 
 ---
 
-## 6. Onde fica cada parte no código
+## 7. Onde fica cada parte no código
 
 | Pasta / arquivo | O que tem |
 |---|---|
@@ -154,7 +175,7 @@ flowchart LR
 
 ---
 
-## 7. Desempenho
+## 8. Desempenho
 
 - Roda em CPU, sem placa de vídeo.
 - Usa menos de 3 GB de memória: tabelas são lidas em blocos, áudio em lotes pequenos e vídeo um

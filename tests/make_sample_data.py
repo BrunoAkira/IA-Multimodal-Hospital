@@ -20,9 +20,9 @@ rng = np.random.default_rng(7)
 
 
 # ---------------------------------------------------------------------------
-# MIMIC
+# base clínica
 # ---------------------------------------------------------------------------
-def make_mimic(n_patients: int = 12):
+def make_clinical(n_patients: int = 12):
     hosp, icu = OUT / "clinical" / "hosp", OUT / "clinical" / "icu"
     hosp.mkdir(parents=True, exist_ok=True)
     icu.mkdir(parents=True, exist_ok=True)
@@ -74,7 +74,7 @@ def make_mimic(n_patients: int = 12):
                               "dose_unit_rx", "route", "doses_per_24_hrs"]).to_csv(hosp / "prescriptions.csv.gz", index=False)
     pd.DataFrame(tr, columns=["subject_id", "hadm_id", "transfer_id", "eventtype", "careunit", "intime",
                               "outtime"]).to_csv(hosp / "transfers.csv.gz", index=False)
-    print("MIMIC de amostra ->", OUT / "clinical")
+    print("base clínica de amostra ->", OUT / "clinical")
 
 
 # ---------------------------------------------------------------------------
@@ -107,7 +107,7 @@ def wav_bytes(y: np.ndarray, sr: int = 16000) -> bytes:
     return buf.getvalue()
 
 
-def make_torgo(per_speaker: int = 25):
+def make_speech(per_speaker: int = 25):
     speakers = {"F01": "dysarthria", "M01": "dysarthria", "M03": "dysarthria",
                 "FC01": "healthy", "MC01": "healthy", "MC02": "healthy"}
     words = ["yes", "no", "the quick brown fox", "pat", "window", "say ah", "she sells seashells"]
@@ -119,18 +119,18 @@ def make_torgo(per_speaker: int = 25):
             rows.append({"audio": {"bytes": wav_bytes(y), "path": f"{spk}_{i:03d}.wav"},
                          "transcription": str(rng.choice(words)), "speech_status": status,
                          "gender": "female" if spk.startswith("F") else "male", "speaker_id": spk})
-    out = OUT / "audio"
+    out = OUT / "speech"
     out.mkdir(parents=True, exist_ok=True)
     try:
         pd.DataFrame(rows).to_parquet(out / "train-00000-of-00004.parquet", index=False)
-        print("TORGO de amostra ->", out)
+        print("base de fala de amostra ->", out)
     except ImportError:
-        print("pyarrow não instalado: Parquet de amostra do TORGO não foi gerado.")
+        print("pyarrow não instalado: Parquet de amostra da base de fala não foi gerado.")
     return rows
 
 
 # ---------------------------------------------------------------------------
-# UL-RED (.amc: ângulos das articulações por quadro)
+# captura de movimento (.amc: ângulos das articulações por quadro)
 # ---------------------------------------------------------------------------
 def amc_text(frames: list[dict]) -> str:
     lines = [":FULLY-SPECIFIED", ":DEGREES"]
@@ -160,10 +160,10 @@ def squat_frames(paces=(1.0,), depth: float = 80, fps: int = 30, bad_form: bool 
     return frames
 
 
-def make_ulred(subjects: int = 4):
+def make_motion_capture(subjects: int = 4):
     for s in range(1, subjects + 1):
         sid = f"S{s:02d}"
-        d = OUT / "video" / sid / "Marker" / "Clean"
+        d = OUT / "motion_capture" / sid / "Marker" / "Clean"
         d.mkdir(parents=True, exist_ok=True)
         for motion, depth in (("MiniSquat", 70), ("SitToStand", 90)):
             bad = (s == subjects and motion == "MiniSquat")   # último sujeito com execução ruim
@@ -171,10 +171,10 @@ def make_ulred(subjects: int = 4):
             (d / f"{motion}R1{sid}.amc").write_text(amc_text(squat_frames((1.0,), depth_s)))
             (d / f"{motion}R3{sid}.amc").write_text(
                 amc_text(squat_frames((1.0, 0.55, 1.8), depth_s, bad_form=bad)))
-    print("UL-RED de amostra ->", OUT / "video")
+    print("captura de movimento de amostra ->", OUT / "motion_capture")
 
 
 if __name__ == "__main__":
-    make_mimic()
-    make_torgo()
-    make_ulred()
+    make_clinical()
+    make_speech()
+    make_motion_capture()

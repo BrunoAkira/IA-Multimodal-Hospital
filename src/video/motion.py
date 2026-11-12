@@ -1,5 +1,5 @@
 """
-Análise de movimento das sessões de fisioterapia (UL-RED, arquivos .amc).
+Análise de movimento das sessões de fisioterapia (captura de movimento, arquivos .amc).
 
 Ideia central: comparar cada repetição com a execução de REFERÊNCIA do mesmo
 sujeito (arquivo R1 = uma repetição em ritmo normal).
@@ -17,7 +17,7 @@ Depois:
   1) regras clínicas simples (ritmo fora, amplitude reduzida, assimetria)
   2) IsolationForest treinado SÓ com repetições normais de OUTROS sujeitos
      (detecção de novidade, validação "deixa um sujeito de fora")
-Os ritmos rápido/lento do UL-RED (repetições 2 e 3 do arquivo R3) servem de
+Os ritmos rápido/lento da captura de movimento (repetições 2 e 3 do arquivo R3) servem de
 rótulo para medir se o detector acerta.
 """
 from __future__ import annotations
@@ -30,9 +30,9 @@ from sklearn.ensemble import IsolationForest
 from sklearn.metrics import roc_auc_score
 
 from ..core.events import Event
-from .amc import parse_amc, index_ulred
+from .amc import parse_amc, index_motion_capture
 
-PACE_LABELS = ["normal", "fast", "slow"]   # ordem das repetições nos arquivos R3 (README do UL-RED)
+PACE_LABELS = ["normal", "fast", "slow"]   # ordem das repetições nos arquivos R3 (README da captura de movimento)
 LEFT_RIGHT = [("lfemur", "rfemur"), ("ltibia", "rtibia"), ("lhumerus", "rhumerus"), ("lradius", "rradius")]
 
 
@@ -145,9 +145,9 @@ def analyze_pair(r1_path: str, r3_path: str) -> list[dict]:
 
 
 def build_repetition_table(index: pd.DataFrame | None = None, system: str = "marker") -> pd.DataFrame:
-    idx = index_ulred() if index is None else index
+    idx = index_motion_capture() if index is None else index
     if idx.empty:
-        raise FileNotFoundError("Nenhum .amc do UL-RED encontrado em datasets/video/")
+        raise FileNotFoundError("Nenhum .amc da captura de movimento encontrado em datasets/motion_capture/")
     idx = idx[idx["system"] == system]
     rows = []
     for (subj, motion), g in idx.groupby(["subject", "motion"]):
@@ -215,7 +215,7 @@ def repetition_events(df: pd.DataFrame, base_ts: str) -> list[Event]:
         ts = (t0 + pd.Timedelta(minutes=i % 120)).isoformat()
         ev = {"motion": r.motion, "rep": r.rep, "duration_ratio": round(r.duration_ratio, 2),
               "rom_ratio": round(r.rom_ratio, 2), "dtw_shape": round(r.dtw_shape, 3)}
-        pid = f"ulred:{r.subject}"
+        pid = f"mocap:{r.subject}"
         if r.pace_deviation:
             kind = "slower" if r.duration_ratio > 1 else "faster"
             events.append(Event(pid, ts, "video", "physio_motion", "pace_deviation", 0.45,

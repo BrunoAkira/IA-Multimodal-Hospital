@@ -1,7 +1,7 @@
 """
 Modelos sobre as características de voz.
 
-1) Classificador de disartria (supervisionado, rótulos do TORGO)
+1) Classificador de disartria (supervisionado, rótulos da base de fala)
    - Validação GroupKFold POR FALANTE: o modelo é sempre testado em pessoas
      que ele não ouviu no treino, o que impede que memorize a voz de cada pessoa.
 2) Indicadores de alteração vocal (não supervisionado, em relação ao próprio falante)

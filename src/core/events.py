@@ -30,7 +30,7 @@ def severity_from_score(score: float) -> str:
 
 @dataclass
 class Event:
-    patient_id: str          # id de origem (ex.: "mimic:10000032", "torgo:F01", "ulred:S01")
+    patient_id: str          # id de origem (ex.: "clinical:10000032", "speech:F01", "mocap:S01")
     timestamp: str           # ISO 8601; para áudio/vídeo sem data usamos a data da sessão
     modality: str            # "clinical" | "audio" | "video" | "text"
     source: str              # sub-módulo (ex.: "vitals", "prescriptions", "speech_features")

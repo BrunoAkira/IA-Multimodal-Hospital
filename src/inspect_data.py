@@ -10,8 +10,8 @@ from .core import azure_client
 def inspect_all():
     print(f"\nPasta de datasets: {config.DATASETS}")
 
-    # --- MIMIC ---
-    print("\n=== MIMIC-IV Demo (clinical) ===")
+    # --- base clínica ---
+    print("\n=== Base clínica de UTI (datasets/clinical) ===")
     for name in ("chartevents", "prescriptions", "transfers"):
         hits = list(config.CLINICAL_DIR.rglob(f"{name}.csv*"))
         if hits:
@@ -20,9 +20,9 @@ def inspect_all():
         else:
             print(f"  --  {name}.csv.gz não encontrado")
 
-    # --- TORGO ---
-    print("\n=== TORGO (audio) ===")
-    files = sorted(config.AUDIO_DIR.glob("*.parquet"))
+    # --- base de fala ---
+    print("\n=== Base de fala (datasets/speech) ===")
+    files = sorted(config.SPEECH_DIR.glob("*.parquet"))
     if not files:
         print("  --  nenhum .parquet")
     for f in files:
@@ -33,10 +33,10 @@ def inspect_all():
         except ImportError:
             print("  pyarrow não instalado (pip install pyarrow)")
 
-    # --- UL-RED ---
-    print("\n=== UL-RED (video/motion) ===")
-    from .video.amc import index_ulred
-    idx = index_ulred()
+    # --- captura de movimento ---
+    print("\n=== Captura de movimento (datasets/motion_capture) ===")
+    from .video.amc import index_motion_capture
+    idx = index_motion_capture()
     if idx.empty:
         print("  --  nenhum .amc")
     else:

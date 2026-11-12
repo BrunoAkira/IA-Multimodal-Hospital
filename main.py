@@ -3,10 +3,10 @@ Hospital AI — monitoramento multimodal de pacientes.
 
 Comandos:
     python main.py inspect     # confere datasets, vídeos, consultas e chaves do Azure
-    python main.py clinical    # MIMIC: sinais vitais, prescrições, transferências
-    python main.py audio       # TORGO + consultas: voz, Speech to Text, Text Analytics
-    python main.py video       # UL-RED (.amc) + vídeos .mp4 (OpenPose / YOLOv8)
-    python main.py rehab24     # avaliação em vídeo real com o gabarito do REHAB24-6
+    python main.py clinical    # base clínica: sinais vitais, prescrições, transferências
+    python main.py audio       # base de fala + consultas: voz, Speech to Text, Text Analytics
+    python main.py video       # captura de movimento (.amc) + vídeos .mp4 (OpenPose / YOLOv8)
+    python main.py video-validation  # valida a análise de vídeo contra um gabarito correto/incorreto
     python main.py fusion      # pacientes virtuais + fusão + alertas
     python main.py all         # tudo acima, em ordem
     python main.py monitor     # simulação de tempo real dos sinais vitais no terminal
@@ -18,10 +18,10 @@ import json
 
 def main():
     parser = argparse.ArgumentParser(description="Hospital AI — multimodal patient monitoring")
-    parser.add_argument("command", choices=["inspect", "clinical", "audio", "video", "rehab24", "fusion", "all", "monitor"])
-    parser.add_argument("--exercises", default="1,6", help="rehab24: ids dos exercícios (1=arm abduction ... 6=squats)")
-    parser.add_argument("--max-videos", type=int, default=4, help="rehab24: máximo de vídeos por exercício")
-    parser.add_argument("--rows", type=int, default=None, help="máximo de falas do TORGO")
+    parser.add_argument("command", choices=["inspect", "clinical", "audio", "video", "video-validation", "fusion", "all", "monitor"])
+    parser.add_argument("--exercises", default="1,6", help="video-validation: ids dos exercícios (1=arm abduction ... 6=squats)")
+    parser.add_argument("--max-videos", type=int, default=4, help="video-validation: máximo de vídeos por exercício")
+    parser.add_argument("--rows", type=int, default=None, help="máximo de falas da base de fala")
     parser.add_argument("--speed", type=float, default=0.2, help="segundos reais por hora simulada (monitor)")
     parser.add_argument("--hours", type=int, default=None, help="limite de horas simuladas (monitor; padrão = todas)")
     args = parser.parse_args()
@@ -38,16 +38,16 @@ def main():
     if args.command in ("audio", "all"):
         from src import config
         from src.audio.pipeline import run_audio
-        print(json.dumps(run_audio(args.rows or config.MAX_TORGO_ROWS), indent=2, default=str))
+        print(json.dumps(run_audio(args.rows or config.MAX_SPEECH_ROWS), indent=2, default=str))
 
     if args.command in ("video", "all"):
         from src.video.pipeline import run_video
         print(json.dumps(run_video(), indent=2, default=str))
 
-    if args.command == "rehab24":
-        from src.video.rehab24 import run_rehab24
+    if args.command == "video-validation":
+        from src.video.video_validation import run_video_validation
         ex = [int(x) for x in args.exercises.split(",") if x.strip()]
-        print(json.dumps(run_rehab24(ex, args.max_videos), indent=2, default=str))
+        print(json.dumps(run_video_validation(ex, args.max_videos), indent=2, default=str))
 
     if args.command in ("fusion", "all"):
         from src.fusion import run_fusion

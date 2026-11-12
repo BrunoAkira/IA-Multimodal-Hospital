@@ -3,11 +3,11 @@ Fusão multimodal e motor de alertas.
 
 1) Pacientes virtuais
    Os 3 datasets são de pessoas DIFERENTES. Para demonstrar a fusão, cada
-   "paciente virtual" (VP001, VP002...) junta: 1 paciente do MIMIC + 1 falante do
-   TORGO + 1 sujeito do UL-RED + 1 consulta (+ 1 vídeo de fisioterapia, se houver).
+   "paciente virtual" (VP001, VP002...) junta: 1 paciente da base clínica + 1 falante da
+   base de fala + 1 sujeito da captura de movimento + 1 consulta (+ 1 vídeo de fisioterapia, se houver).
    É uma simulação de integração para demonstração, não um caso clínico real.
    Os eventos de áudio/vídeo/texto (que não têm data) são posicionados no último
-   dia da internação do paciente do MIMIC.
+   dia da internação do paciente da base clínica.
 
 2) Fusão (por paciente, janela móvel de 24 h)
    Em cada janela pegamos a maior pontuação de cada modalidade e combinamos:
@@ -43,14 +43,14 @@ def build_virtual_patients(events: pd.DataFrame) -> pd.DataFrame:
         return sorted(s.unique())
 
     # pacientes da base clínica ordenados pelo número de eventos
-    mimic = (events[events["patient_id"].str.startswith("mimic:")]
+    clinical = (events[events["patient_id"].str.startswith("clinical:")]
              .groupby("patient_id").size().sort_values(ascending=False).index.tolist())
-    others = {"torgo": ids("torgo:"), "ulred": ids("ulred:"), "consult": ids("consult:"), "physio": ids("physio:"),
-              "rehab": ids("rehab:")}
-    n = min(len(mimic), max([len(v) for v in others.values()] + [0]))
+    others = {"speech": ids("speech:"), "motion_capture": ids("mocap:"), "consultation": ids("consult:"),
+              "physio_video": ids("physio:"), "exercise_video": ids("exercise:")}
+    n = min(len(clinical), max([len(v) for v in others.values()] + [0]))
     rows = []
     for i in range(n):
-        row = {"virtual_id": f"VP{i + 1:03d}", "mimic": mimic[i]}
+        row = {"virtual_id": f"VP{i + 1:03d}", "clinical": clinical[i]}
         for k, lst in others.items():
             row[k] = lst[i] if i < len(lst) else None
         rows.append(row)
@@ -63,16 +63,16 @@ def apply_virtual_ids(events: pd.DataFrame, vp: pd.DataFrame) -> pd.DataFrame:
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     epoch = pd.Timestamp(config.RELATIVE_EPOCH)
 
-    # último dia de internação de cada paciente do MIMIC (âncora para áudio/vídeo)
+    # último dia de internação de cada paciente da base clínica (âncora para áudio/vídeo)
     last_seen = df[df["modality"] == "clinical"].groupby("patient_id")["timestamp"].max()
     for r in vp.to_dict("records"):
-        anchor = (last_seen.get(r["mimic"], epoch) - pd.Timedelta(hours=24)).normalize()
-        for k in ("mimic", "torgo", "ulred", "consult", "physio", "rehab"):
+        anchor = (last_seen.get(r["clinical"], epoch) - pd.Timedelta(hours=24)).normalize()
+        for k in ("clinical", "speech", "motion_capture", "consultation", "physio_video", "exercise_video"):
             if not r.get(k):
                 continue
             m = df["source_patient_id"] == r[k]
             df.loc[m, "patient_id"] = r["virtual_id"]
-            if k != "mimic":   # reposiciona horários relativos
+            if k != "clinical":   # reposiciona horários relativos
                 df.loc[m, "timestamp"] = anchor + (df.loc[m, "timestamp"] - epoch)
     return df.sort_values(["patient_id", "timestamp"]).reset_index(drop=True)
 

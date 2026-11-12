@@ -1,5 +1,5 @@
 """
-Leitor de arquivos .amc (Acclaim Motion Capture), o formato do UL-RED.
+Leitor de arquivos .amc (Acclaim Motion Capture), o formato da captura de movimento.
 
 Um .amc é texto simples:
     :FULLY-SPECIFIED
@@ -56,7 +56,7 @@ def parse_name(path: Path) -> dict | None:
     return {"motion": m["motion"], "reps": int(m["reps"]), "subject": f"S{int(m['subject']):02d}"}
 
 
-def index_ulred(folder: Path = config.VIDEO_DIR) -> pd.DataFrame:
+def index_motion_capture(folder: Path = config.MOCAP_DIR) -> pd.DataFrame:
     """
     Lista todos os .amc com metadados: sujeito, movimento, nº de repetições e
     sistema de captura (pasta 'Marker' ou 'Markerless'). Preferimos os dados 'Clean'.
