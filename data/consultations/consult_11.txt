@@ -1,0 +1,4 @@
+Doctor: You look tired. How is your voice today?
+Patient: My voice gets weak by the afternoon, and I have trouble speaking long sentences.
+Doctor: Any difficulty swallowing?
+Patient: A little. I am exhausted and breathless when I talk for a long time.

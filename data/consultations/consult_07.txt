@@ -1,0 +1,4 @@
+Doctor: How is your mood lately?
+Patient: Honestly, I feel hopeless. I am tired, I don't want to eat, everything is difficult.
+Doctor: Have you had thoughts of hurting yourself?
+Patient: No, I am not suicidal. I just feel sad and alone.

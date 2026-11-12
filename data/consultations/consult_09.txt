@@ -1,0 +1,4 @@
+Doctor: The nurse said you were vomiting during the night.
+Patient: Yes, vomiting three times and I have a high fever. My stomach has severe pain.
+Doctor: Any blood when you vomit?
+Patient: No blood. But I feel weak and dizzy.

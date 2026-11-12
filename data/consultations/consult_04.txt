@@ -1,0 +1,4 @@
+Doctor: How is your breathing today?
+Patient: Difficult. I can't breathe well when I lie down, I need three pillows.
+Doctor: Have you noticed swelling in your legs?
+Patient: Yes, a lot of swelling, and I am exhausted after a few steps.

@@ -1,0 +1,4 @@
+Doctor: Any problems with the new medication?
+Patient: I feel a bit dizzy in the morning, but otherwise okay.
+Doctor: Any bleeding or black stools?
+Patient: No bleeding, no black stools. I am fine.

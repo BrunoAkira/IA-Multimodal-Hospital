@@ -1,0 +1,20 @@
+# --- base (dados, ML, gráficos) ---
+numpy
+pandas
+scipy
+scikit-learn
+joblib
+matplotlib
+jinja2
+python-dotenv
+requests
+pyarrow            # leitura do TORGO (.parquet) em lotes
+# --- visão computacional (OpenPose roda pelo OpenCV DNN; YOLOv8 pelo ultralytics) ---
+opencv-python
+ultralytics        # instala o PyTorch (CPU) automaticamente
+# --- dashboard ---
+streamlit
+plotly
+# --- opcionais ---
+# soundfile        # só se o TORGO vier em FLAC em vez de WAV
+# pyttsx3          # gerar os .wav das consultas com voz sintética offline

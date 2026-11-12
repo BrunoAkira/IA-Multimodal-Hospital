@@ -1,0 +1,4 @@
+Doctor: Any symptoms since the surgery?
+Patient: Some bleeding from the wound this morning and fever last night.
+Doctor: Is the pain getting worse?
+Patient: Yes, the pain is worse and the area is red and swollen. I am worried.

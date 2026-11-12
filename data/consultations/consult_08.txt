@@ -1,0 +1,4 @@
+Doctor: Good afternoon. Any pain after the knee physiotherapy?
+Patient: A little pain at the end of the session, but it is improving.
+Doctor: Any swelling or fever?
+Patient: No swelling and no fever. I am happy with the progress.

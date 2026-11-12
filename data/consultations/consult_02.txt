@@ -1,0 +1,4 @@
+Doctor: Hello, how is your recovery going?
+Patient: Much better, thanks. The pain is almost gone and I am sleeping well.
+Doctor: Any dizziness when you stand up?
+Patient: No dizziness at all. I feel good and I am walking every day.

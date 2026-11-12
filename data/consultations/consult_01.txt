@@ -1,0 +1,6 @@
+Doctor: Good morning. How have you been feeling since yesterday?
+Patient: Not great, doctor. I have chest pain when I walk to the bathroom, and I feel short of breath.
+Doctor: Does the pain spread to your arm or jaw?
+Patient: Sometimes to my left arm. I am scared, it feels worse than last week.
+Doctor: Any fever or cough?
+Patient: No fever. Just very tired all the time.

@@ -1,0 +1,4 @@
+Doctor: How is your cough?
+Patient: The cough is better. No wheezing anymore and no shortness of breath.
+Doctor: Are you using the inhaler correctly?
+Patient: Yes, twice a day. I feel well and I am relieved.

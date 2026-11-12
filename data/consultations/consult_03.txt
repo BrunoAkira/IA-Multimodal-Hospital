@@ -1,0 +1,4 @@
+Doctor: Your daughter said you were confused this morning.
+Patient: I... I don't remember. My words come out wrong, slurred speech, my hand feels numb.
+Doctor: When did the numbness start?
+Patient: This morning. I feel weakness on the right side and I am worried.
