@@ -52,7 +52,7 @@ python --version
 
 **Passo 2 — Baixar o projeto**
 ```bash
-git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git
+git clone https://github.com/BrunoAkira/IA-Multimodal-Hospital.git
 cd IA-Multimodal-Hospital
 ```
 
@@ -198,7 +198,7 @@ python -m pip --version
 
 ```bash
 # 1. Clone o repositório e entre na pasta (onde estão main.py e requirements.txt)
-git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git
+git clone https://github.com/BrunoAkira/IA-Multimodal-Hospital.git
 cd IA-Multimodal-Hospital
 ls main.py requirements.txt         # os dois devem aparecer
 
