@@ -175,7 +175,6 @@ flowchart LR
 | `src/fusion.py` | Central de alertas |
 | `src/report_figures.py` | Gráficos dos resultados para o relatório (`python main.py figures`) |
 | `dashboard/app.py` | Painel da equipe |
-| `tests/make_sample_data.py` | Gera dados sintéticos para testar sem baixar nada |
 | `example_data/` | Amostras reais pequenas de cada tipo de dado, para rodar o projeto direto do repositório |
 | `scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas |
 | `docs/` | Relatório técnico em PDF |

@@ -40,31 +40,96 @@ substituí-las.
 
 📐 **Arquitetura:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📊 **Resultados:** [seção 11](#11-resultados-e-como-são-medidos) · 📄 **Relatório técnico:** [docs/relatorio_tecnico_hospital_ai.pdf](docs/relatorio_tecnico_hospital_ai.pdf) · 📖 **Termos técnicos:** [Glossário](#15-glossário)
 
-### Início rápido
+## ⚡ Uso rápido
 
-O repositório já traz **amostras reais de exemplo** em `example_data/` (seção 3.1):
+Tudo o que é preciso para rodar o projeto do zero, em ordem. Os comandos são para **bash**
+(no Windows, Git Bash ou MSYS2 UCRT64). Tempo total: cerca de 20 minutos, a maior parte em downloads.
 
+**Passo 1 — Conferir o Python** (3.11 ou 3.12; 3.10 a 3.14 funcionam)
 ```bash
-git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git && cd IA-Multimodal-Hospital
-python -m venv .venv && source .venv/Scripts/activate   # Linux/macOS: source .venv/bin/activate
-pip install -r requirements.txt
-python scripts/download_models.py            # modelos de visão
-cp .env.example .env                         # preencha as chaves do Azure (seção 5)
-
-export HOSPITAL_AI_DATASETS=example_data
-python scripts/download_example_data.py      # base de fala (2 arquivos, ~740 MB)
-python main.py all
-python main.py video-validation
-python main.py figures                       # gráficos dos resultados em results/figures/
-python -m streamlit run dashboard/app.py     # http://localhost:8501
+python --version
 ```
 
-O roteiro completo de teste, com o que conferir em cada etapa, está na [seção 3.3](#33-roteiro-de-teste-completo).
+**Passo 2 — Baixar o projeto**
+```bash
+git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git
+cd IA-Multimodal-Hospital
+```
+
+**Passo 3 — Criar e ativar o ambiente virtual**
+```bash
+python -m venv .venv
+source .venv/Scripts/activate        # Linux/macOS: source .venv/bin/activate
+```
+Deve aparecer `(.venv)` no começo da linha. Em todo terminal novo, entre na pasta e rode o `source` de novo.
+
+**Passo 4 — Instalar as bibliotecas e os modelos de visão** (alguns minutos)
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python scripts/download_models.py
+```
+
+**Passo 5 — Configurar o Azure** (plano gratuito; como criar os recursos na [seção 5](#5-azure-no-plano-gratuito))
+```bash
+cp .env.example .env
+nano .env        # preencha as 4 linhas AZURE_...; Ctrl+O, Enter, Ctrl+X
+```
+Sem as chaves o projeto também roda: a transcrição fica de fora e o texto é analisado localmente.
+
+**Passo 6 — Apontar para os dados de exemplo e baixar a base de fala** (~740 MB, uma vez só)
+```bash
+export HOSPITAL_AI_DATASETS=example_data
+python scripts/download_example_data.py
+```
+
+**Passo 7 — Conferir se está tudo no lugar**
+```bash
+python main.py inspect
+```
+
+**Passo 8 — Rodar a análise completa** (clínico → áudio → vídeo → fusão e alertas)
+```bash
+python main.py all
+```
+
+**Passo 9 — Validar o vídeo contra o gabarito do fisioterapeuta**
+```bash
+python main.py video-validation
+```
+
+**Passo 10 — Gerar os gráficos dos resultados**
+```bash
+python main.py figures
+```
+
+**Passo 11 — Ver os resultados**
+```bash
+start results/reports/video_validation.html       # relatório HTML (Linux: xdg-open | macOS: open)
+explorer.exe "$(cygpath -w results/figures)"      # pasta dos gráficos (Windows)
+python -m streamlit run dashboard/app.py          # painel em http://localhost:8501 (Ctrl+C encerra)
+```
+
+**O que você deve ver** (pequenas variações são normais):
+
+| Passo | Resultado esperado |
+|---|---|
+| 7 · `inspect` | Bases com **OK**, `ângulos pré-calculados: 8`, 2 vídeos de exemplo, `Speech configurado: True` |
+| 8 · clínico | `72,826 medições -> 12,085 horas-paciente`; recall de 0,80 a 0,93 |
+| 8 · áudio | `1380 falas de 8 falantes`; ROC-AUC ~0,78; WER ~0,24 (controle) e ~0,71 (disartria) |
+| 8 · vídeo | 2 vídeos com `pose_visible_fraction` 1.0 e relatórios `video_*.html` |
+| 8 · fusão | ~14.500 eventos e ~2.050 alertas, 12 *critical* |
+| 9 · `video-validation` | Agachamento com ROC-AUC 0,79; contagem a até 2 repetições do gabarito |
+| 10 · `figures` | `10 gráficos em .../results/figures` |
+
+Algo deu errado? Veja a [Solução de problemas](#12-solução-de-problemas). Para analisar mais dados
+além dos exemplos, veja onde colocá-los na [seção 3.2](#32-usando-mais-dados).
 
 ---
 
 ## Sumário
 
+- [⚡ Uso rápido](#-uso-rápido)
 1. [Pré-requisitos](#1-pré-requisitos)
 2. [Instalação (passo a passo em bash)](#2-instalação-passo-a-passo-em-bash)
 3. [Primeiros testes](#3-primeiros-testes)
@@ -189,74 +254,81 @@ python main.py figures
 python -m streamlit run dashboard/app.py     # abra http://localhost:8501
 ```
 
-### 3.2 Com dados sintéticos (sem nenhum download)
+### 3.2 Usando mais dados
 
-Para conferir a instalação sem baixar nada, o projeto gera **dados sintéticos** nos mesmos
-formatos (não têm valor clínico):
+Os dados de exemplo são recortes pequenos das bases públicas da [seção 4.2](#42-bases-de-exemplo-usadas-na-validação).
+Para analisar mais dados (as bases completas ou dados próprios no mesmo formato), coloque os
+arquivos em `datasets/`, cada tipo na sua pasta:
+
+| Tipo de dado | Pasta | Formato |
+|---|---|---|
+| Sinais vitais, prescrições e transferências | `datasets/clinical/hosp/` e `datasets/clinical/icu/` | Tabelas `.csv` ou `.csv.gz` |
+| Gravações de voz | `datasets/speech/` | Arquivos `.parquet` |
+| Captura de movimento | `datasets/motion_capture/` | Arquivos `.amc` (uma pasta por participante) |
+| Vídeos de exercícios com gabarito | `datasets/exercise_videos/` | `Ex<n>/` com os vídeos + `Segmentation.csv` |
+| Vídeos de fisioterapia a analisar | `data/physio_videos/` | `.mp4`, `.avi`, `.mov` ou `.mkv` |
+| Consultas | `data/consultations/` | `consult_XX.txt` + `consult_XX.wav` |
+
+O formato de cada arquivo está na [seção 4.1](#41-formatos-aceitos), e os comandos para organizar
+as bases completas na [seção 4.4](#44-organizando-as-bases-de-exemplo-bash).
+
+A pasta `datasets/` é a padrão. Para trocar de `example_data/` para ela, basta desfazer a variável
+do passo 6 do Uso rápido; para usar outra pasta qualquer, aponte a variável para ela:
 
 ```bash
-source .venv/Scripts/activate
-python tests/make_sample_data.py            # cria a pasta sample_datasets/
-export HOSPITAL_AI_DATASETS=sample_datasets # usa a amostra (vale só para este terminal)
-export AZURE_STT_SPEECH_SAMPLES=0            # não gasta cota do Azure com áudio sintético
-
-python main.py inspect
+unset HOSPITAL_AI_DATASETS                       # volta a usar datasets/
+export HOSPITAL_AI_DATASETS=/caminho/para/dados   # ou usa outra pasta com a mesma estrutura
+python main.py inspect                            # confere o que foi encontrado
 python main.py all
-python -m streamlit run dashboard/app.py    # abra http://localhost:8501
 ```
 
-Para voltar a usar as bases completas em `datasets/`:
-```bash
-unset HOSPITAL_AI_DATASETS AZURE_STT_SPEECH_SAMPLES
-```
+### 3.3 Verificação dos resultados
 
-### 3.3 Roteiro de teste completo
-
-Este roteiro reproduz, numa pasta nova, tudo o que aparece no relatório técnico. Leva cerca de
-20 minutos (a maior parte é a instalação e o download da base de fala).
+Depois de executar o [Uso rápido](#-uso-rápido), o comando abaixo lê os arquivos de resultado e
+mostra as principais métricas de cada módulo, para comparar com os valores de referência da
+[seção 11](#11-resultados-e-como-são-medidos):
 
 ```bash
-# 1. Clonar numa pasta limpa
-git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git ~/teste-hospital-ai
-cd ~/teste-hospital-ai
+python - <<'EOF'
+import json
+from pathlib import Path
 
-# 2. Instalar
-python -m venv .venv && source .venv/Scripts/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-python scripts/download_models.py
+r = Path("results")
+def load(name):
+    f = r / name
+    return json.loads(f.read_text()) if f.exists() else None
 
-# 3. Chaves do Azure (seção 5)
-cp .env.example .env && nano .env
+clin = load("clinical_summary.json")
+if clin:
+    rec = [v["recall"] for v in clin["injection_evaluation"].values()]
+    print(f"Clínico ........ {clin['patient_hours']} horas-paciente | recall {min(rec):.2f} a {max(rec):.2f}")
 
-# 4. Rodar com os dados de exemplo
-export HOSPITAL_AI_DATASETS=example_data
-python scripts/download_example_data.py
-python main.py inspect
-python main.py all
-python main.py video-validation
-python main.py figures
+audio = load("audio_summary.json")
+if audio:
+    best = audio["classifier"]["best_model"]
+    auc = audio["classifier"]["metrics"][best]["roc_auc"]
+    wer = audio.get("azure_stt_wer_by_group")
+    ok = isinstance(wer, dict) and all(isinstance(v, dict) for v in wer.values())
+    wer_txt = " | ".join(f"WER {g} {v['mean']:.2f}" for g, v in wer.items()) if ok else "sem WER"
+    print(f"Áudio .......... {audio['utterances']} falas, {audio['speakers']} falantes | ROC-AUC {auc:.2f} | {wer_txt}")
 
-# 5. Ver os resultados
-start results/reports/video_validation.html        # Linux: xdg-open | macOS: open
-explorer.exe "$(cygpath -w results/figures)"       # pasta com os gráficos (Windows)
-python -m streamlit run dashboard/app.py           # http://localhost:8501
+val = load("video_validation.json")
+if val:
+    for ex, res in val["exercises"].items():
+        print(f"Vídeo .......... {ex}: {res['repetitions']} repetições | ROC-AUC {res['logistic_leave_one_person_out']['roc_auc']:.2f}")
+    c = val["repetition_counting"]
+    print(f"Contagem ....... {sum(x['detected_reps'] or 0 for x in c)} contadas para {sum(x['ground_truth_reps'] for x in c)} do gabarito")
+
+fus = load("fusion_summary.json")
+if fus:
+    print(f"Fusão .......... {fus['events']} eventos -> {fus['alerts']} alertas {fus['alerts_by_level']}")
+
+figs = sorted((r / "figures").glob("*.png")) if (r / "figures").exists() else []
+print(f"Gráficos ....... {len(figs)} arquivos em results/figures")
+EOF
 ```
 
-O que conferir em cada etapa (valores obtidos com os dados de exemplo; pequenas variações são normais):
-
-| Etapa | Saída esperada |
-|---|---|
-| `inspect` | Base clínica, fala e captura de movimento com **OK**; `ângulos pré-calculados: 8`; 2 vídeos em `example_data/physio_videos`; `Speech configurado: True` e `Language configurado: True` |
-| `all` → clínico | `72,826 medições -> 12,085 horas-paciente`; recall de 0,80 a 0,93 na avaliação por injeção |
-| `all` → áudio | `1380 falas de 8 falantes`; ROC-AUC ~0,78; WER ~0,24 (controle) e ~0,71 (disartria) |
-| `all` → vídeo | 2 vídeos analisados com `pose_visible_fraction` 1.0; relatórios `video_*.html` |
-| `all` → fusão | ~14.500 eventos, ~2.050 alertas, 12 *critical* |
-| `video-validation` | Agachamento com ROC-AUC 0,79; contagem a até 2 repetições do gabarito em cada vídeo |
-| `figures` | `10 gráficos em .../results/figures` |
-
-Sem as chaves do Azure, tudo roda igual, com duas diferenças: não há WER (gráfico `f06` não é
-gerado) e o texto das consultas é analisado pelo dicionário local.
+Um módulo que não aparece na saída ainda não foi executado.
 
 ### 3.4 Gráficos para o relatório
 
@@ -685,7 +757,6 @@ Depois de rodar o pipeline de novo, clique em **Reload results** na barra latera
 | Script | O que faz |
 |---|---|
 | `python scripts/download_models.py` | Baixa YOLOv8n, YOLOv8n-pose e OpenPose COCO para `models/` |
-| `python tests/make_sample_data.py` | Cria `sample_datasets/` com dados sintéticos nos formatos reais |
 | `python scripts/download_example_data.py` | Baixa a base de fala de exemplo para `example_data/speech/` |
 | `python scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas em `datasets/` (recortes pequenos de cada base) |
 
@@ -860,7 +931,7 @@ Coloque no `.env` ou use `export NOME=valor` no terminal (vale só para aquele t
 | `LANGUAGE_RECORDS_BUDGET` | `4000` | Limite de segurança do Language (registros/mês) |
 | `AZURE_STT_SPEECH_SAMPLES` | `60` | Quantas falas da base de fala vão para o Speech to Text (`0` desliga) |
 | `MAX_SPEECH_ROWS` | `1500` | Quantas falas da base de fala processar |
-| `HOSPITAL_AI_DATASETS` | `datasets` | Pasta dos datasets (ex.: `sample_datasets`) |
+| `HOSPITAL_AI_DATASETS` | `datasets` | Pasta dos datasets (ex.: `example_data`) |
 
 Limiares e listas (limites clínicos, medicamentos de alto risco, pesos da fusão, janela, cooldown)
 ficam em `src/config.py`, todos comentados.
@@ -928,9 +999,6 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 
 Todos esses números aparecem nos gráficos de `python main.py figures` e no relatório técnico.
 
-> Com os **dados sintéticos** (seção 3.2) as métricas saem perto de 1,0, porque os dados são
-> fáceis. Os valores representativos são os da tabela acima, obtidos com os dados de exemplo.
-
 ---
 
 ## 12. Solução de problemas
@@ -941,7 +1009,7 @@ Todos esses números aparecem nos gráficos de `python main.py figures` e no rel
 | `streamlit: command not found` | Ative o ambiente e use `python -m streamlit run dashboard/app.py` |
 | `(.venv)` não aparece | Cada terminal novo precisa de `source .venv/Scripts/activate` |
 | `python: command not found` ou abre a Microsoft Store | Reinstale o Python marcando "Add python.exe to PATH" e reabra o terminal |
-| Projeto usa os dados sintéticos sem querer | `unset HOSPITAL_AI_DATASETS` |
+| Projeto lê a pasta errada de dados | `echo $HOSPITAL_AI_DATASETS` mostra a pasta em uso; `unset HOSPITAL_AI_DATASETS` volta para `datasets/` |
 | `Tabela 'chartevents' não encontrada` | As pastas `hosp/` e `icu/` devem estar dentro de `datasets/clinical/` |
 | `Nenhum .parquet da base de fala` | Coloque o `.parquet` direto em `datasets/speech/` |
 | `Nenhum .amc da captura de movimento` | Extraia os zips dentro de `datasets/motion_capture/` (devem aparecer `S01/`, `S02/`...) |
