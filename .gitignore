@@ -7,11 +7,19 @@ __pycache__/
 # SEGREDOS: chaves do Azure ficam só no .env local
 .env
 
-# dados (nunca versionar dados clínicos ou de pacientes)
-datasets/*
-!datasets/README.md
+# dados: data/ guarda só as amostras de exemplo versionadas;
+# dados adicionados localmente (bases completas, vídeos, áudios) não vão para o Git
+data/speech/
+data/exercise_videos/Ex*/
+data/physio_videos/*
+!data/physio_videos/*_example.mp4
+data/consultations/*.wav
+data/motion_capture/*
+!data/motion_capture/S01/
+datasets/
+example_data/
 sample_datasets/
-example_data/speech/
+*.zip
 *.part
 
 # modelos baixados/treinados
@@ -24,13 +32,6 @@ models/*
 # saídas geradas pelo pipeline
 results/*
 !results/.gitkeep
-
-# mídias locais
-data/consultations/*.wav
-data/physio_videos/*.mp4
-data/physio_videos/*.avi
-data/physio_videos/*.mov
-data/physio_videos/*.mkv
 
 # sistema
 .DS_Store

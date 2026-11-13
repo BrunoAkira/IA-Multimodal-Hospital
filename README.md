@@ -77,11 +77,11 @@ nano .env        # preencha as 4 linhas AZURE_...; Ctrl+O, Enter, Ctrl+X
 ```
 Sem as chaves o projeto também roda: a transcrição fica de fora e o texto é analisado localmente.
 
-**Passo 6 — Apontar para os dados de exemplo e baixar a base de fala** (~740 MB, uma vez só)
+**Passo 6 — Baixar a base de fala de exemplo** (~740 MB, uma vez só)
 ```bash
-export HOSPITAL_AI_DATASETS=example_data
-python scripts/download_example_data.py
+python scripts/download_speech_data.py
 ```
+Os outros dados de exemplo já vêm no repositório, na pasta `data/` ([seção 3.1](#31-os-dados-de-exemplo)).
 
 **Passo 7 — Conferir se está tudo no lugar**
 ```bash
@@ -120,7 +120,7 @@ python -m streamlit run dashboard/app.py          # painel em http://localhost:8
 | 8 · clínico | `72,826 medições -> 12,085 horas-paciente`; recall de 0,80 a 0,93 |
 | 8 · áudio | `1380 falas de 8 falantes`; ROC-AUC ~0,78; WER ~0,24 (controle) e ~0,71 (disartria) |
 | 8 · vídeo | 2 vídeos com `pose_visible_fraction` 1.0 e relatórios `video_*.html` |
-| 8 · fusão | ~14.500 eventos e ~2.050 alertas, 12 *critical* |
+| 8 · fusão | ~14.200 eventos e ~1.970 alertas, 9 *critical* |
 | 9 · `video-validation` | Agachamento com ROC-AUC 0,79; contagem a até 2 repetições do gabarito |
 | 10 · `figures` | `10 gráficos em .../results/figures` |
 
@@ -228,57 +228,49 @@ python -c "import numpy, pandas, sklearn, cv2, pyarrow, ultralytics, streamlit, 
 
 ## 3. Primeiros testes
 
-### 3.1 Com os dados de exemplo incluídos no repositório
+### 3.1 Os dados de exemplo
 
-A pasta `example_data/` traz amostras pequenas de bases públicas reais, no formato que o sistema
-lê (detalhes e licenças em `example_data/README.md`):
+Todos os dados de entrada ficam numa única pasta, `data/`, com uma subpasta por tipo de dado.
+O repositório já traz nela amostras pequenas de bases públicas reais, no formato que o sistema lê
+(origem e licenças em `data/README.md`):
 
-| Pasta | Conteúdo |
+| Pasta | Conteúdo de exemplo |
 |---|---|
-| `clinical/` | Sinais vitais, prescrições e transferências de 100 pacientes de UTI |
-| `motion_capture/` | Alguns exercícios de reabilitação de um participante (`.amc`) |
-| `exercise_videos/` | Gabarito de fisioterapeuta e ângulos das articulações já calculados de 8 vídeos |
-| `physio_videos/` | Dois trechos curtos de vídeo de exercícios, para OpenPose/YOLOv8 |
-| `speech/` | Base de fala, baixada por `scripts/download_example_data.py` (não é redistribuída) |
+| `data/clinical/` | Sinais vitais, prescrições e transferências de 100 pacientes de UTI |
+| `data/speech/` | Gravações de voz, baixadas por `scripts/download_speech_data.py` (a licença não permite incluí-las no repositório) |
+| `data/motion_capture/` | Exercícios de reabilitação de um participante (`.amc`) |
+| `data/exercise_videos/` | Gabarito de fisioterapeuta e ângulos das articulações já calculados de 8 vídeos |
+| `data/physio_videos/` | Dois trechos curtos de vídeo de exercícios, para OpenPose/YOLOv8 |
+| `data/consultations/` | 12 roteiros de consulta |
 
-```bash
-source .venv/Scripts/activate
-export HOSPITAL_AI_DATASETS=example_data     # vale só para este terminal
-python scripts/download_example_data.py      # base de fala (2 arquivos, ~740 MB, uma vez só)
-
-python main.py inspect
-python main.py all
-python main.py video-validation
-python main.py figures
-python -m streamlit run dashboard/app.py     # abra http://localhost:8501
-```
+Com o ambiente ativo, a sequência completa é a do [Uso rápido](#-uso-rápido), a partir do passo 6.
 
 ### 3.2 Usando mais dados
 
-Os dados de exemplo são recortes pequenos das bases públicas da [seção 4.2](#42-bases-de-exemplo-usadas-na-validação).
-Para analisar mais dados (as bases completas ou dados próprios no mesmo formato), coloque os
-arquivos em `datasets/`, cada tipo na sua pasta:
+Para analisar mais dados, como as bases completas ou dados próprios no mesmo formato, coloque os
+arquivos **nas mesmas subpastas de `data/`**. Não é preciso mudar nada no código:
 
 | Tipo de dado | Pasta | Formato |
 |---|---|---|
-| Sinais vitais, prescrições e transferências | `datasets/clinical/hosp/` e `datasets/clinical/icu/` | Tabelas `.csv` ou `.csv.gz` |
-| Gravações de voz | `datasets/speech/` | Arquivos `.parquet` |
-| Captura de movimento | `datasets/motion_capture/` | Arquivos `.amc` (uma pasta por participante) |
-| Vídeos de exercícios com gabarito | `datasets/exercise_videos/` | `Ex<n>/` com os vídeos + `Segmentation.csv` |
+| Sinais vitais, prescrições e transferências | `data/clinical/hosp/` e `data/clinical/icu/` | Tabelas `.csv` ou `.csv.gz` |
+| Gravações de voz | `data/speech/` | Arquivos `.parquet` |
+| Captura de movimento | `data/motion_capture/` | Arquivos `.amc`, uma pasta por participante (`S01/`, `S02/`...) |
+| Vídeos de exercícios com gabarito | `data/exercise_videos/` | `Ex<n>/` com os vídeos + `Segmentation.csv` |
 | Vídeos de fisioterapia a analisar | `data/physio_videos/` | `.mp4`, `.avi`, `.mov` ou `.mkv` |
 | Consultas | `data/consultations/` | `consult_XX.txt` + `consult_XX.wav` |
 
-O formato de cada arquivo está na [seção 4.1](#41-formatos-aceitos), e os comandos para organizar
-as bases completas na [seção 4.4](#44-organizando-as-bases-de-exemplo-bash).
+O formato de cada arquivo está na [seção 4.1](#41-formatos-aceitos), e os comandos para
+adicionar as bases completas na [seção 4.4](#44-adicionando-as-bases-completas-bash). Arquivos
+grandes adicionados em `data/` (vídeos, áudios, `.parquet`, participantes além do `S01`) ficam
+fora do Git pelo `.gitignore`.
 
-A pasta `datasets/` é a padrão. Para trocar de `example_data/` para ela, basta desfazer a variável
-do passo 6 do Uso rápido; para usar outra pasta qualquer, aponte a variável para ela:
+Para ler os dados de outra pasta com a mesma estrutura, aponte a variável `HOSPITAL_AI_DATASETS`
+para ela (vale só para o terminal atual):
 
 ```bash
-unset HOSPITAL_AI_DATASETS                       # volta a usar datasets/
-export HOSPITAL_AI_DATASETS=/caminho/para/dados   # ou usa outra pasta com a mesma estrutura
+export HOSPITAL_AI_DATASETS=/caminho/para/dados
 python main.py inspect                            # confere o que foi encontrado
-python main.py all
+unset HOSPITAL_AI_DATASETS                        # volta a usar data/
 ```
 
 ### 3.3 Verificação dos resultados
@@ -314,12 +306,12 @@ são padronizados em inglês** (nomes de colunas, rótulos, eventos e alertas).
 
 | Módulo | Pasta | Formato esperado |
 |---|---|---|
-| Clínico | `datasets/clinical/` | Tabelas CSV (`.csv` ou `.csv.gz`): `chartevents` (`subject_id`, `stay_id`, `charttime`, `itemid`, `valuenum`), `prescriptions` (`hadm_id`, `starttime`, `drug`, `dose_val_rx`, `route`...) e `transfers` (`hadm_id`, `careunit`, `intime`, `outtime`). Os códigos de cada sinal vital ficam em `VITAL_ITEMIDS` (`src/config.py`), ajustáveis para outro sistema hospitalar |
-| Voz | `datasets/speech/` | Arquivos `.parquet` com uma coluna de áudio (WAV), o texto falado, o id do falante e o grupo (com ou sem alteração na fala). Os nomes das colunas são reconhecidos automaticamente |
+| Clínico | `data/clinical/` | Tabelas CSV (`.csv` ou `.csv.gz`): `chartevents` (`subject_id`, `stay_id`, `charttime`, `itemid`, `valuenum`), `prescriptions` (`hadm_id`, `starttime`, `drug`, `dose_val_rx`, `route`...) e `transfers` (`hadm_id`, `careunit`, `intime`, `outtime`). Os códigos de cada sinal vital ficam em `VITAL_ITEMIDS` (`src/config.py`), ajustáveis para outro sistema hospitalar |
+| Voz | `data/speech/` | Arquivos `.parquet` com uma coluna de áudio (WAV), o texto falado, o id do falante e o grupo (com ou sem alteração na fala). Os nomes das colunas são reconhecidos automaticamente |
 | Consultas | `data/consultations/` | Pares `consult_XX.txt` (roteiro `Doctor: ...` / `Patient: ...`) e `consult_XX.wav` (gravação) |
-| Captura de movimento | `datasets/motion_capture/` | Arquivos `.amc` (ângulos das articulações por quadro), nomeados `{Movimento}R{repetições}S{sujeito}.amc`: `R1` = repetição de referência, `R3` = três repetições a avaliar |
-| Vídeo de fisioterapia | `data/physio_videos/` ou `<pasta de datasets>/physio_videos/` | Vídeos `.mp4`, `.avi`, `.mov` ou `.mkv`; o prefixo do nome define o exercício (seção 4.5) |
-| Vídeos com gabarito | `datasets/exercise_videos/` | Vídeos em `Ex<n>/` + um `Segmentation.csv` (separado por `;`) com `video_id`, `repetition_number`, `exercise_id`, `person_id`, `first_frame`, `last_frame`, `exercise_subtype` e `correctness` (1 = correta, 0 = incorreta) |
+| Captura de movimento | `data/motion_capture/` | Arquivos `.amc` (ângulos das articulações por quadro), nomeados `{Movimento}R{repetições}S{sujeito}.amc`: `R1` = repetição de referência, `R3` = três repetições a avaliar |
+| Vídeo de fisioterapia | `data/physio_videos/` | Vídeos `.mp4`, `.avi`, `.mov` ou `.mkv`; o prefixo do nome define o exercício (seção 4.5) |
+| Vídeos com gabarito | `data/exercise_videos/` | Vídeos em `Ex<n>/` + um `Segmentation.csv` (separado por `;`) com `video_id`, `repetition_number`, `exercise_id`, `person_id`, `first_frame`, `last_frame`, `exercise_subtype` e `correctness` (1 = correta, 0 = incorreta) |
 
 ### 4.2 Bases de exemplo usadas na validação
 
@@ -336,39 +328,42 @@ Nomes, autores, links e licenças estão nas [Referências](#14-referências).
 ### 4.3 Estrutura das pastas
 
 ```
-datasets/
-  clinical/
-    hosp/  prescriptions.csv.gz, transfers.csv.gz, ...   <- base clínica de UTI [1]
-    icu/   chartevents.csv.gz, ...
-  speech/
-    train-00000-of-00004.parquet                         <- base de fala [2]
-  motion_capture/
-    S01/ S02/ ...                                        <- base de captura de movimento [3]
-  exercise_videos/
-    Ex1/ ... Ex6/  Segmentation.csv                      <- base de vídeos de exercícios [4]
 data/
-  consultations/  consult_01.txt ... consult_12.txt  (+ consult_XX.wav)
-  physio_videos/  squat_....mp4, arm_raise_....mp4   <- vídeos a analisar
+  README.md                                    <- origem e licença de cada amostra
+  clinical/
+    hosp/  prescriptions.csv.gz, transfers.csv.gz       <- base clínica de UTI [1]
+    icu/   chartevents.csv.gz
+  speech/
+    train-00000-of-00004.parquet, train-00002-...      <- base de fala [2] (baixada por script)
+  motion_capture/
+    S01/ (S02/, S03/ ...)                              <- base de captura de movimento [3]
+  exercise_videos/
+    Segmentation.csv, angles/ (Ex1/ ... Ex6/)          <- base de vídeos de exercícios [4]
+  physio_videos/
+    squat_example.mp4, arm_raise_example.mp4           <- vídeos a analisar
+  consultations/
+    consult_01.txt ... consult_12.txt (+ .wav)         <- consultas
 ```
 
-### 4.4 Organizando as bases de exemplo (bash)
+### 4.4 Adicionando as bases completas (bash)
+
+Depois de baixar as bases nos links das [Referências](#14-referências), copie cada uma para a
+sua subpasta de `data/`. Os arquivos da base completa substituem as amostras de mesmo nome.
 
 ```bash
-mkdir -p datasets/clinical datasets/speech datasets/motion_capture datasets/exercise_videos
-
-# Base clínica de UTI [1] (o Python extrai o zip; o Git Bash nem sempre tem unzip)
+# Base clínica de UTI [1]
 python -m zipfile -e ~/Downloads/mimic-iv-clinical-database-demo-2.2.zip /tmp/clinica
-cp -r /tmp/clinica/*/hosp /tmp/clinica/*/icu datasets/clinical/
+cp -r /tmp/clinica/*/hosp /tmp/clinica/*/icu data/clinical/
 
-# Base de fala [2]
-cp ~/Downloads/train-0000[02]-of-00004.parquet datasets/speech/
+# Base de fala [2]: os dois arquivos do exemplo já são baixados por script
+python scripts/download_speech_data.py
 
 # Base de captura de movimento [3] (repita para S02, S03...)
-python -m zipfile -e ~/Downloads/S01.zip datasets/motion_capture/
+python -m zipfile -e ~/Downloads/S02.zip data/motion_capture/
 
 # Base de vídeos de exercícios [4]
-python -m zipfile -e ~/Downloads/videos.zip datasets/exercise_videos/
-cp ~/Downloads/Segmentation.csv ~/Downloads/Segmentation.txt datasets/exercise_videos/
+python -m zipfile -e ~/Downloads/videos.zip data/exercise_videos/
+cp ~/Downloads/Segmentation.csv ~/Downloads/Segmentation.txt data/exercise_videos/
 
 python main.py inspect      # confere tudo
 ```
@@ -394,7 +389,7 @@ movimento [3] não serve aqui, porque seus vídeos mostram só o esqueleto desen
 
 Exemplo:
 ```bash
-cp "datasets/exercise_videos/CAMINHO/DO/VIDEO.mp4" data/physio_videos/squat_rehab_01.mp4
+cp "data/exercise_videos/CAMINHO/DO/VIDEO.mp4" data/physio_videos/squat_rehab_01.mp4
 ```
 
 **Para gravar com o celular:** câmera parada, corpo inteiro no quadro, 15–30 s, 5 repetições.
@@ -467,7 +462,7 @@ Sempre a partir da pasta do projeto, com o ambiente ativo (`source .venv/Scripts
 
 | Comando | O que faz |
 |---|---|
-| `python main.py inspect` | Confere datasets, vídeos, consultas e chaves do Azure (não processa nada) |
+| `python main.py inspect` | Confere os dados, vídeos, consultas e chaves do Azure (não processa nada) |
 | `python main.py clinical` | Anomalias clínicas (sinais vitais, prescrições, transferências) |
 | `python main.py audio` | Voz + consultas (Speech to Text + Text Analytics) |
 | `python main.py video` | Captura de movimento + vídeos (OpenPose/YOLOv8) + relatórios |
@@ -557,7 +552,7 @@ python main.py consultations
 python main.py video
 ```
 
-**Parte 1 — captura de movimento (`datasets/motion_capture/`):** compara as 3 repetições de cada arquivo `R3`
+**Parte 1 — captura de movimento (`data/motion_capture/`):** compara as 3 repetições de cada arquivo `R3`
 (ritmo normal, rápido e lento) com a repetição de referência do arquivo `R1`:
 
 | Medida | Significado |
@@ -608,7 +603,7 @@ python main.py video-validation --exercises 1,5,6 --max-videos 6
 ```
 
 Mede se o sistema reconhece execuções incorretas, comparando cada repetição com a marcação de
-um fisioterapeuta. Lê os vídeos em `datasets/exercise_videos/Ex<n>/` (câmera `Camera17` no nome do
+um fisioterapeuta. Lê os vídeos em `data/exercise_videos/Ex<n>/` (câmera `Camera17` no nome do
 arquivo) e o gabarito `Segmentation.csv` (formato na seção 4.1). Na base de exemplo [4], os ids
 de exercício são:
 
@@ -713,24 +708,23 @@ Depois de rodar o pipeline de novo, clique em **Reload results** na barra latera
 | Script | O que faz |
 |---|---|
 | `python scripts/download_models.py` | Baixa YOLOv8n, YOLOv8n-pose e OpenPose COCO para `models/` |
-| `python scripts/download_example_data.py` | Baixa a base de fala de exemplo para `example_data/speech/` |
-| `python scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas em `datasets/` (recortes pequenos de cada base) |
+| `python scripts/download_speech_data.py` | Baixa a base de fala de exemplo para `data/speech/` |
 
 ---
 
 ## 7. Tutorial das funções (uso direto em Python)
 
-Todas as funções podem ser usadas isoladamente, num script ou notebook. A pasta `examples/` traz
+Todas as funções podem ser usadas isoladamente, num script ou notebook. A pasta `scripts/examples/` traz
 um script pronto para cada caso; rode a partir da pasta do projeto, com o ambiente ativo.
 
 | Script | O que demonstra |
 |---|---|
-| `python examples/event_example.py` | Criar um evento no formato único e ler os eventos gravados |
-| `python examples/vital_stream_example.py` | Detector de sinais vitais recebendo uma leitura por vez |
-| `python examples/text_terms_example.py "texto"` | Termos críticos e negação num texto (`--azure` usa o Text Analytics for health) |
-| `python examples/voice_features_example.py audio.wav` | Características de voz de um arquivo WAV |
-| `python examples/single_video_example.py video.mp4` | Análise completa de um único vídeo |
-| `python examples/motion_capture_example.py` | Listar e ler os arquivos de captura de movimento |
+| `python scripts/examples/event_example.py` | Criar um evento no formato único e ler os eventos gravados |
+| `python scripts/examples/vital_stream_example.py` | Detector de sinais vitais recebendo uma leitura por vez |
+| `python scripts/examples/text_terms_example.py "texto"` | Termos críticos e negação num texto (`--azure` usa o Text Analytics for health) |
+| `python scripts/examples/voice_features_example.py audio.wav` | Características de voz de um arquivo WAV |
+| `python scripts/examples/single_video_example.py video.mp4` | Análise completa de um único vídeo |
+| `python scripts/examples/motion_capture_example.py` | Listar e ler os arquivos de captura de movimento |
 
 Exemplo de uso de uma função num script próprio:
 ```python
@@ -823,7 +817,7 @@ Coloque no `.env` ou use `export NOME=valor` no terminal (vale só para aquele t
 | `LANGUAGE_RECORDS_BUDGET` | `4000` | Limite de segurança do Language (registros/mês) |
 | `AZURE_STT_SPEECH_SAMPLES` | `60` | Quantas falas da base de fala vão para o Speech to Text (`0` desliga) |
 | `MAX_SPEECH_ROWS` | `1500` | Quantas falas da base de fala processar |
-| `HOSPITAL_AI_DATASETS` | `datasets` | Pasta dos datasets (ex.: `example_data`) |
+| `HOSPITAL_AI_DATASETS` | `data` | Outra pasta de dados com a mesma estrutura de `data/` |
 
 Limiares e listas (limites clínicos, medicamentos de alto risco, pesos da fusão, janela, cooldown)
 ficam em `src/config.py`, todos comentados.
@@ -886,8 +880,8 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | Vídeo × gabarito | Repetição correta × incorreta, testando sempre numa pessoa fora do treino (8 vídeos, 123 repetições) | Agachamento: ROC-AUC 0,79 (melhor sinal: inclinação do tronco, 0,82). Abdução: só 2 pessoas, o modelo não generaliza (0,12); o melhor sinal sozinho é o outro braço se mexer junto (0,79) | `video_validation.json`, `reports/video_validation.html` |
 | Contagem de repetições | Contagem automática × gabarito | 127 contadas para 123, no máximo 2 de diferença por vídeo | `video_validation.json` |
 | Captura de movimento | Ritmo rápido/lento como desvio (1 participante) | Regra de ritmo: 2 de 3 desvios, sem falso alarme | `video_summary.json`, `reports/physio_S01.html` |
-| Fusão | Eventos de todos os módulos por paciente, janela de 24 h | 14.545 eventos → 2.051 alertas (12 *critical*, 1.126 *high*, 913 *medium*); 18 multimodais | `fusion_summary.json`, `alerts.csv` |
-| Azure | Contador mensal | 256 s de áudio (1,4% da cota) e 24 registros de texto (0,5%) | `audio_summary.json` |
+| Fusão | Eventos de todos os módulos por paciente, janela de 24 h | 14.240 eventos → 1.972 alertas (9 *critical*, 971 *high*, 992 *medium*); 17 multimodais | `fusion_summary.json`, `alerts.csv` |
+| Azure | Contador mensal | 309 s de áudio (1,7% da cota) e 24 registros de texto (0,5%) | `audio_summary.json` |
 
 Todos esses números aparecem nos gráficos de `python main.py figures` e no relatório técnico.
 

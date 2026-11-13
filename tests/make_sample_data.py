@@ -174,7 +174,19 @@ def make_motion_capture(subjects: int = 4):
     print("captura de movimento de amostra ->", OUT / "motion_capture")
 
 
+def copy_consultations():
+    """Copia os roteiros de consulta do projeto, para a pasta sintética ter a mesma estrutura de data/."""
+    import shutil
+    src = Path(__file__).resolve().parents[1] / "data" / "consultations"
+    dst = OUT / "consultations"
+    dst.mkdir(parents=True, exist_ok=True)
+    for f in src.glob("consult_*.txt"):
+        shutil.copy(f, dst / f.name)
+    print("consultas ->", dst)
+
+
 if __name__ == "__main__":
     make_clinical()
     make_speech()
     make_motion_capture()
+    copy_consultations()

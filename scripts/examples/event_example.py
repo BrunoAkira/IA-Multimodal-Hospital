@@ -6,7 +6,7 @@ Exemplo: criar um evento no formato único do sistema e ler os eventos já grava
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # permite importar src/ a partir de examples/
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # permite importar src/ a partir de scripts/examples/
 
 from src.core.events import Event, load_events
 

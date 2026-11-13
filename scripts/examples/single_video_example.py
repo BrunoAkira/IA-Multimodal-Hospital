@@ -8,7 +8,7 @@ O prefixo do nome do arquivo define o exercício (squat_, arm_raise_...; ver REA
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.video.vision import analyze_video
 

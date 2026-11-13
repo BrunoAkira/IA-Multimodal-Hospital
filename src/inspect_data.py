@@ -8,7 +8,7 @@ from .core import azure_client
 
 
 def inspect_all():
-    print(f"\nPasta de datasets: {config.DATASETS}")
+    print(f"\nPasta de dados: {config.DATASETS}")
 
     # --- base clínica ---
     print(f"\n=== Base clínica de UTI ({config.CLINICAL_DIR.name}/) ===")
@@ -24,7 +24,7 @@ def inspect_all():
     print(f"\n=== Base de fala ({config.SPEECH_DIR.name}/) ===")
     files = sorted(config.SPEECH_DIR.glob("*.parquet"))
     if not files:
-        print("  --  nenhum .parquet (para baixar a base de exemplo: python scripts/download_example_data.py)")
+        print("  --  nenhum .parquet (para baixar a base de fala: python scripts/download_speech_data.py)")
     for f in files:
         try:
             import pyarrow.parquet as pq
@@ -46,9 +46,9 @@ def inspect_all():
     # --- vídeos e consultas ---
     print("\n=== Vídeos de fisioterapia (.mp4/.avi/.mov/.mkv) ===")
     exts = (".mp4", ".avi", ".mov", ".mkv")
-    for d in (config.PHYSIO_VIDEO_DIR, config.DATASETS / "physio_videos"):
-        vids = [f.name for f in d.iterdir() if f.suffix.lower() in exts] if d.exists() else []
-        print(f"  {len(vids)} vídeo(s) em {d}" + (f": {vids}" if vids else ""))
+    d = config.PHYSIO_VIDEO_DIR
+    vids = [f.name for f in d.iterdir() if f.suffix.lower() in exts] if d.exists() else []
+    print(f"  {len(vids)} vídeo(s) em {d}" + (f": {vids}" if vids else ""))
 
     print("\n=== Vídeos de exercícios com gabarito (exercise_videos/) ===")
     ev = config.EXERCISE_VIDEO_DIR

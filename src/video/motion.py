@@ -147,7 +147,7 @@ def analyze_pair(r1_path: str, r3_path: str) -> list[dict]:
 def build_repetition_table(index: pd.DataFrame | None = None, system: str = "marker") -> pd.DataFrame:
     idx = index_motion_capture() if index is None else index
     if idx.empty:
-        raise FileNotFoundError("Nenhum .amc da captura de movimento encontrado em datasets/motion_capture/")
+        raise FileNotFoundError("Nenhum .amc da captura de movimento encontrado em data/motion_capture/")
     idx = idx[idx["system"] == system]
     rows = []
     for (subj, motion), g in idx.groupby(["subject", "motion"]):

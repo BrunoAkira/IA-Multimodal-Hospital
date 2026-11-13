@@ -6,7 +6,7 @@ Exemplo: detector de sinais vitais em tempo real, recebendo uma leitura por vez.
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.clinical.vitals import VitalStreamDetector
 

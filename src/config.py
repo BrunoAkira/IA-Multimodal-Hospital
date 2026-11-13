@@ -15,15 +15,15 @@ from dotenv import load_dotenv
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")  # lê as chaves do Azure do arquivo .env
 
-# HOSPITAL_AI_DATASETS aponta para outra pasta de dados (ex.: dados sintéticos de teste)
-DATASETS = Path(os.getenv("HOSPITAL_AI_DATASETS", ROOT / "datasets"))
-CLINICAL_DIR = DATASETS / "clinical"                # base clínica de UTI (hosp/, icu/)
-SPEECH_DIR = DATASETS / "speech"                    # base de fala em Parquet
+# Todos os dados de entrada ficam numa única pasta (data/), um subdiretório por tipo de dado.
+# HOSPITAL_AI_DATASETS aponta para outra pasta com a mesma estrutura, se necessário.
+DATASETS = Path(os.getenv("HOSPITAL_AI_DATASETS", ROOT / "data"))
+CLINICAL_DIR = DATASETS / "clinical"                # sinais vitais, prescrições, transferências (hosp/, icu/)
+SPEECH_DIR = DATASETS / "speech"                    # gravações de voz em Parquet
 MOCAP_DIR = DATASETS / "motion_capture"             # captura de movimento (S01/, S02/, ...)
-EXERCISE_VIDEO_DIR = DATASETS / "exercise_videos"   # vídeos de exercícios + Segmentation.csv
-
-CONSULT_DIR = ROOT / "data" / "consultations"   # roteiros .txt + gravações .wav
-PHYSIO_VIDEO_DIR = ROOT / "data" / "physio_videos"  # vídeos de fisioterapia a analisar
+EXERCISE_VIDEO_DIR = DATASETS / "exercise_videos"   # vídeos de exercícios + gabarito Segmentation.csv
+PHYSIO_VIDEO_DIR = DATASETS / "physio_videos"       # vídeos de fisioterapia a analisar
+CONSULT_DIR = DATASETS / "consultations"            # roteiros .txt + gravações .wav das consultas
 MODELS_DIR = ROOT / "models"            # pesos do OpenPose / YOLO e modelos treinados
 RESULTS_DIR = ROOT / "results"          # tudo que o pipeline gera
 CACHE_DIR = RESULTS_DIR / "cache"       # respostas do Azure já recebidas (evita chamadas repetidas)

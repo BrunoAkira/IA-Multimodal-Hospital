@@ -40,7 +40,11 @@ qualquer fonte nesse formato pode ser conectada.
 | Fisioterapia | Câmeras na sala de fisioterapia ou sensores de movimento | Vídeo (MP4, AVI...) ou captura de movimento (`.amc`) | Base de vídeos de exercícios com gabarito de fisioterapeuta e base de captura de movimento |
 
 As bases de exemplo servem para demonstrar e medir o funcionamento; os formatos e as referências
-completas estão no [README](README.md) (seções 4 e 16).
+completas estão no [README](README.md) (seções 4 e 14).
+
+Todos os dados de entrada ficam numa única pasta, `data/`, com uma subpasta por tipo de dado
+(`clinical/`, `speech/`, `motion_capture/`, `exercise_videos/`, `physio_videos/`, `consultations/`).
+O repositório já traz amostras de exemplo nessas subpastas; dados novos entram nas mesmas pastas.
 
 ---
 
@@ -175,10 +179,10 @@ flowchart LR
 | `src/fusion.py` | Central de alertas |
 | `src/report_figures.py` | Gráficos dos resultados para o relatório (`python main.py figures`) |
 | `src/results_view.py` | Resumo, alertas e consultas no terminal (`summary`, `alerts`, `consultations`) |
-| `examples/` | Scripts curtos que mostram como usar cada função isoladamente |
+| `scripts/examples/` | Scripts curtos que mostram como usar cada função isoladamente |
 | `dashboard/app.py` | Painel da equipe |
-| `example_data/` | Amostras reais pequenas de cada tipo de dado, para rodar o projeto direto do repositório |
-| `scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas |
+| `data/` | Todos os dados de entrada, uma subpasta por tipo; já traz amostras reais de exemplo |
+| `scripts/download_speech_data.py` | Baixa a base de fala de exemplo para `data/speech/` |
 | `docs/` | Relatório técnico em PDF |
 
 ---

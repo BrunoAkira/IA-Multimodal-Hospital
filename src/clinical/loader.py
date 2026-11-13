@@ -22,7 +22,7 @@ def find_table(name: str, folder: Path = config.CLINICAL_DIR) -> Path:
         if hits:
             return hits[0]
     raise FileNotFoundError(
-        f"Tabela '{name}' não encontrada em {folder}. Extraia a base clínica em datasets/clinical/."
+        f"Tabela '{name}' não encontrada em {folder}. Coloque as pastas hosp/ e icu/ em data/clinical/."
     )
 
 

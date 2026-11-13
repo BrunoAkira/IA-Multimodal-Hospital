@@ -1,13 +1,12 @@
 """
-Baixa a base de fala usada como exemplo (dois arquivos Parquet, ~370 MB cada) para <pasta>/speech/.
+Baixa a base de fala usada nos exemplos (dois arquivos Parquet, ~370 MB cada) para <pasta>/speech/.
 
 A base de fala é de uso acadêmico e não é redistribuída no repositório; este script a obtém
-da cópia pública no Hugging Face. Destino padrão: example_data/speech/
+da cópia pública no Hugging Face. Destino: data/speech/
 (ou a pasta indicada em HOSPITAL_AI_DATASETS).
 """
 from __future__ import annotations
 
-import os
 import sys
 import urllib.request
 from pathlib import Path
@@ -28,8 +27,8 @@ def progress(blocks, block_size, total):
 
 
 if __name__ == "__main__":
-    # sem HOSPITAL_AI_DATASETS definido, baixa para example_data/speech/
-    dest_dir = config.SPEECH_DIR if os.getenv("HOSPITAL_AI_DATASETS") else ROOT / "example_data" / "speech"
+    # destino: data/speech/ (ou <HOSPITAL_AI_DATASETS>/speech/)
+    dest_dir = config.SPEECH_DIR
     dest_dir.mkdir(parents=True, exist_ok=True)
     for name in FILES:
         dest = dest_dir / name

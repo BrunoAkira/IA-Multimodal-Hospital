@@ -6,7 +6,7 @@ Exemplo: listar e ler os arquivos de captura de movimento (.amc).
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.video.amc import index_motion_capture, parse_amc
 
