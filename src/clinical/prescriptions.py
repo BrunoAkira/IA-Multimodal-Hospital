@@ -32,8 +32,10 @@ def build_change_features(rx: pd.DataFrame) -> pd.DataFrame:
     df["order_number"] = g.cumcount()                 # 0 = primeiro pedido desse remédio
 
     # razão de dose (log2: +1 = dobrou, -1 = caiu pela metade)
-    ratio = df["daily_dose"] / df["prev_daily_dose"]
-    df["log2_dose_ratio"] = np.log2(ratio.where(ratio > 0)).fillna(0.0)
+    # só compara quando as duas doses são positivas: dose anterior zero ou ausente não tem razão definida
+    valid = (df["daily_dose"] > 0) & (df["prev_daily_dose"] > 0)
+    ratio = (df["daily_dose"] / df["prev_daily_dose"]).where(valid)
+    df["log2_dose_ratio"] = np.log2(ratio).replace([np.inf, -np.inf], np.nan).fillna(0.0)
     df["route_changed"] = (df["prev_route"].notna() & (df["route"] != df["prev_route"])).astype(int)
 
     # pedidos do mesmo remédio nas 48 h anteriores (inclui o atual)
