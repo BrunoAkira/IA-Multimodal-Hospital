@@ -22,6 +22,7 @@ flowchart LR
     E --> F[Central de alertas]
     F --> P[Painel da equipe]
     F --> R[Relatórios]
+    F --> G[Gráficos de resultados]
 ```
 
 ---
@@ -164,7 +165,7 @@ flowchart LR
 
 | Pasta / arquivo | O que tem |
 |---|---|
-| `main.py` | Comandos do sistema (`clinical`, `audio`, `video`, `fusion`, `all`...) |
+| `main.py` | Comandos do sistema (`clinical`, `audio`, `video`, `video-validation`, `fusion`, `all`, `figures`...) |
 | `src/config.py` | Todos os ajustes num lugar só: limites clínicos, pesos, janelas |
 | `src/clinical/` | Análise clínica |
 | `src/audio/` | Análise de voz e texto |
@@ -172,10 +173,12 @@ flowchart LR
 | `src/core/events.py` | O formato do evento |
 | `src/core/azure_client.py` | Conexão com o Azure, cache e controle de cota |
 | `src/fusion.py` | Central de alertas |
+| `src/report_figures.py` | Gráficos dos resultados para o relatório (`python main.py figures`) |
 | `dashboard/app.py` | Painel da equipe |
 | `tests/make_sample_data.py` | Gera dados sintéticos para testar sem baixar nada |
 | `example_data/` | Amostras reais pequenas de cada tipo de dado, para rodar o projeto direto do repositório |
 | `scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas |
+| `docs/` | Relatório técnico em PDF |
 
 ---
 

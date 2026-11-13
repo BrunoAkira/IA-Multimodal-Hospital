@@ -15,8 +15,8 @@ Fusão multimodal e motor de alertas.
    ("OU probabilístico": vários sinais moderados juntos viram um risco alto)
 
 3) Alertas
-   medium (≥0.5), high (≥0.8), critical (≥0.9 com 2+ modalidades).
-   O mesmo paciente não recebe alerta repetido antes de 6 h, a menos que piore.
+   medium (≥0.5), high (≥0.8 e confirmado por mais de um sinal), critical (≥0.9 com 2+ modalidades).
+   O mesmo paciente não recebe alerta repetido antes de 12 h, a menos que piore.
 """
 from __future__ import annotations
 

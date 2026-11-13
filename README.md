@@ -38,14 +38,14 @@ substituí-las.
 > ⚠️ Projeto de pesquisa e demonstração. Não é um dispositivo médico e não deve orientar
 > decisões clínicas.
 
-📐 **Arquitetura detalhada:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📖 **Termos técnicos:** [Glossário](#15-glossário)
+📐 **Arquitetura:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📊 **Resultados:** [seção 11](#11-resultados-e-como-são-medidos) · 📄 **Relatório técnico:** [docs/relatorio_tecnico_hospital_ai.pdf](docs/relatorio_tecnico_hospital_ai.pdf) · 📖 **Termos técnicos:** [Glossário](#15-glossário)
 
 ### Início rápido
 
 O repositório já traz **amostras reais de exemplo** em `example_data/` (seção 3.1):
 
 ```bash
-git clone <url-do-repositorio> hospital_ai && cd hospital_ai
+git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git && cd IA-Multimodal-Hospital
 python -m venv .venv && source .venv/Scripts/activate   # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 python scripts/download_models.py            # modelos de visão
@@ -55,8 +55,11 @@ export HOSPITAL_AI_DATASETS=example_data
 python scripts/download_example_data.py      # base de fala (2 arquivos, ~740 MB)
 python main.py all
 python main.py video-validation
+python main.py figures                       # gráficos dos resultados em results/figures/
 python -m streamlit run dashboard/app.py     # http://localhost:8501
 ```
+
+O roteiro completo de teste, com o que conferir em cada etapa, está na [seção 3.3](#33-roteiro-de-teste-completo).
 
 ---
 
@@ -72,9 +75,9 @@ python -m streamlit run dashboard/app.py     # http://localhost:8501
 8. [Variáveis de configuração](#8-variáveis-de-configuração)
 9. [Arquivos gerados](#9-arquivos-gerados)
 10. [Arquitetura](#10-arquitetura)
-11. [Como os resultados são medidos](#11-como-os-resultados-são-medidos)
+11. [Resultados e como são medidos](#11-resultados-e-como-são-medidos)
 12. [Solução de problemas](#12-solução-de-problemas)
-13. [Limitações conhecidas](#13-limitações-conhecidas)
+13. [Observações sobre os dados de exemplo](#13-observações-sobre-os-dados-de-exemplo)
 14. [Licenças das ferramentas](#14-licenças-das-ferramentas)
 15. [Glossário](#15-glossário)
 16. [Referências](#16-referências)
@@ -130,8 +133,9 @@ python -m pip --version
 ## 2. Instalação (passo a passo em bash)
 
 ```bash
-# 1. Entre na pasta do projeto (onde estão main.py e requirements.txt)
-cd ~/Downloads/hospital_ai          # ajuste para o seu caminho
+# 1. Clone o repositório e entre na pasta (onde estão main.py e requirements.txt)
+git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git
+cd IA-Multimodal-Hospital
 ls main.py requirements.txt         # os dois devem aparecer
 
 # 2. Crie o ambiente virtual (uma vez só)
@@ -181,6 +185,7 @@ python scripts/download_example_data.py      # base de fala (2 arquivos, ~740 MB
 python main.py inspect
 python main.py all
 python main.py video-validation
+python main.py figures
 python -m streamlit run dashboard/app.py     # abra http://localhost:8501
 ```
 
@@ -205,6 +210,63 @@ Para voltar a usar as bases completas em `datasets/`:
 unset HOSPITAL_AI_DATASETS AZURE_STT_SPEECH_SAMPLES
 ```
 
+### 3.3 Roteiro de teste completo
+
+Este roteiro reproduz, numa pasta nova, tudo o que aparece no relatório técnico. Leva cerca de
+20 minutos (a maior parte é a instalação e o download da base de fala).
+
+```bash
+# 1. Clonar numa pasta limpa
+git clone https://github.com/<usuario>/IA-Multimodal-Hospital.git ~/teste-hospital-ai
+cd ~/teste-hospital-ai
+
+# 2. Instalar
+python -m venv .venv && source .venv/Scripts/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python scripts/download_models.py
+
+# 3. Chaves do Azure (seção 5)
+cp .env.example .env && nano .env
+
+# 4. Rodar com os dados de exemplo
+export HOSPITAL_AI_DATASETS=example_data
+python scripts/download_example_data.py
+python main.py inspect
+python main.py all
+python main.py video-validation
+python main.py figures
+
+# 5. Ver os resultados
+start results/reports/video_validation.html        # Linux: xdg-open | macOS: open
+explorer.exe "$(cygpath -w results/figures)"       # pasta com os gráficos (Windows)
+python -m streamlit run dashboard/app.py           # http://localhost:8501
+```
+
+O que conferir em cada etapa (valores obtidos com os dados de exemplo; pequenas variações são normais):
+
+| Etapa | Saída esperada |
+|---|---|
+| `inspect` | Base clínica, fala e captura de movimento com **OK**; `ângulos pré-calculados: 8`; 2 vídeos em `example_data/physio_videos`; `Speech configurado: True` e `Language configurado: True` |
+| `all` → clínico | `72,826 medições -> 12,085 horas-paciente`; recall de 0,80 a 0,93 na avaliação por injeção |
+| `all` → áudio | `1380 falas de 8 falantes`; ROC-AUC ~0,78; WER ~0,24 (controle) e ~0,71 (disartria) |
+| `all` → vídeo | 2 vídeos analisados com `pose_visible_fraction` 1.0; relatórios `video_*.html` |
+| `all` → fusão | ~14.500 eventos, ~2.050 alertas, 12 *critical* |
+| `video-validation` | Agachamento com ROC-AUC 0,79; contagem a até 2 repetições do gabarito em cada vídeo |
+| `figures` | `10 gráficos em .../results/figures` |
+
+Sem as chaves do Azure, tudo roda igual, com duas diferenças: não há WER (gráfico `f06` não é
+gerado) e o texto das consultas é analisado pelo dicionário local.
+
+### 3.4 Gráficos para o relatório
+
+```bash
+python main.py figures
+```
+
+Gera em `results/figures/` os gráficos usados no relatório técnico, todos calculados a partir dos
+arquivos de resultado (seção 6.6b). Rode depois de `all` e `video-validation`.
+
 ---
 
 ## 4. Dados de entrada
@@ -221,7 +283,7 @@ são padronizados em inglês** (nomes de colunas, rótulos, eventos e alertas).
 | Voz | `datasets/speech/` | Arquivos `.parquet` com uma coluna de áudio (WAV), o texto falado, o id do falante e o grupo (com ou sem alteração na fala). Os nomes das colunas são reconhecidos automaticamente |
 | Consultas | `data/consultations/` | Pares `consult_XX.txt` (roteiro `Doctor: ...` / `Patient: ...`) e `consult_XX.wav` (gravação) |
 | Captura de movimento | `datasets/motion_capture/` | Arquivos `.amc` (ângulos das articulações por quadro), nomeados `{Movimento}R{repetições}S{sujeito}.amc`: `R1` = repetição de referência, `R3` = três repetições a avaliar |
-| Vídeo de fisioterapia | `data/physio_videos/` | Vídeos `.mp4`, `.avi`, `.mov` ou `.mkv`; o prefixo do nome define o exercício (tabela abaixo) |
+| Vídeo de fisioterapia | `data/physio_videos/` ou `<pasta de datasets>/physio_videos/` | Vídeos `.mp4`, `.avi`, `.mov` ou `.mkv`; o prefixo do nome define o exercício (seção 4.5) |
 | Vídeos com gabarito | `datasets/exercise_videos/` | Vídeos em `Ex<n>/` + um `Segmentation.csv` (separado por `;`) com `video_id`, `repetition_number`, `exercise_id`, `person_id`, `first_frame`, `last_frame`, `exercise_subtype` e `correctness` (1 = correta, 0 = incorreta) |
 
 ### 4.2 Bases de exemplo usadas na validação
@@ -378,6 +440,7 @@ Sempre a partir da pasta do projeto, com o ambiente ativo (`source .venv/Scripts
 | `python main.py fusion` | Pacientes virtuais + fusão + alertas |
 | `python main.py all` | `clinical` → `audio` → `video` → `fusion` |
 | `python main.py monitor` | Simulação de tempo real dos sinais vitais no terminal |
+| `python main.py figures` | Gráficos dos resultados em `results/figures/` |
 | `python -m streamlit run dashboard/app.py` | Dashboard no navegador |
 
 > Ordem obrigatória: `fusion`, `monitor` e o dashboard leem o que os outros comandos geraram.
@@ -412,9 +475,9 @@ e os eventos em `results/events.jsonl`.
 
 Como ler a avaliação no terminal:
 ```
-'spo2': {'injected': 17, 'precision': 0.55, 'recall': 1.0}
+'spo2': {'injected': 240, 'precision': 0.407, 'recall': 0.933}
 ```
-→ foram injetadas 17 quedas artificiais de SpO₂ e o detector encontrou todas (recall 1.0).
+→ foram injetadas 240 anomalias artificiais de SpO₂ e o detector encontrou 93% delas.
 A precisão é conservadora: os "falsos positivos" incluem anomalias reais que já existem nos dados.
 
 ### 6.3 `audio` — voz e consultas
@@ -584,6 +647,18 @@ python main.py monitor --hours 500        # para depois de 500 horas simuladas
 Reproduz os sinais vitais em ordem cronológica, como se chegassem do monitor à beira do leito,
 e imprime cada alerta na hora (amarelo = medium, vermelho = high). `Ctrl+C` encerra.
 Precisa ter rodado `python main.py clinical` antes.
+
+### 6.6b `figures` — gráficos dos resultados
+
+```bash
+python main.py figures
+```
+
+Lê os JSON de `results/` e salva um PNG por gráfico em `results/figures/`: fluxo do sistema,
+recall e precisão por sinal vital, eventos por fonte, métricas e matrizes de confusão da voz,
+erro da transcrição por grupo, poder de cada característica no vídeo, contagem de repetições,
+alertas por nível e uso do Azure. Rode depois de `all` e `video-validation`; gráficos cujo
+resultado ainda não existe são pulados.
 
 ### 6.7 Dashboard
 
@@ -810,6 +885,7 @@ Tudo vai para `results/` (pode apagar a pasta para recomeçar do zero):
 | `physio_repetitions.csv` | Medidas e pontuação de cada repetição da captura de movimento |
 | `video_angles_<nome>.csv` | Ângulos quadro a quadro de cada vídeo |
 | `reports/*.html` | Relatórios automáticos |
+| `figures/*.png` | Gráficos dos resultados (`python main.py figures`) |
 | `cache/` | Respostas do Azure + `azure_usage.json` (**não apague no meio do mês**: o cache evita novas cobranças de cota) |
 
 ---
@@ -836,17 +912,24 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 
 ---
 
-## 11. Como os resultados são medidos
+## 11. Resultados e como são medidos
 
-| Módulo | Como medimos | Onde ver |
-|---|---|---|
-| Sinais vitais | Injeção de anomalias artificiais → precisão e recall | `clinical_summary.json` |
-| Voz | Classificador validado deixando um falante de fora por vez → acurácia, F1, ROC-AUC | `audio_summary.json` |
-| Captura de movimento | Ritmo rápido/lento como rótulo → ROC-AUC e recall | `video_summary.json` |
-| Speech to Text | WER em fala com e sem disartria | `audio_summary.json`, `speech_azure_stt.csv` |
+| Módulo | Como medimos | Resultado com os dados de exemplo | Onde ver |
+|---|---|---|---|
+| Sinais vitais | Anomalias injetadas em 2% das medições de 100 pacientes (12.085 horas-paciente) | Recall de 80% a 93%; precisão de 19% a 41% | `clinical_summary.json` |
+| Voz | Classificador de disartria testado sempre num falante fora do treino (8 falantes, 1.380 falas) | Regressão logística: ROC-AUC 0,78, acurácia 75%, 158 de 240 falas com disartria reconhecidas | `audio_summary.json` |
+| Speech to Text | Taxa de erro de palavras (WER) em 60 falas | 24% sem alteração × 71% com disartria | `audio_summary.json`, `speech_azure_stt.csv` |
+| Texto das consultas | 12 consultas roteirizadas | 30 eventos de termos críticos e sentimento | `consultations.json` |
+| Vídeo × gabarito | Repetição correta × incorreta, testando sempre numa pessoa fora do treino (8 vídeos, 123 repetições) | Agachamento: ROC-AUC 0,79 (melhor sinal: inclinação do tronco, 0,82). Abdução: só 2 pessoas, o modelo não generaliza (0,12); o melhor sinal sozinho é o outro braço se mexer junto (0,79) | `video_validation.json`, `reports/video_validation.html` |
+| Contagem de repetições | Contagem automática × gabarito | 127 contadas para 123, no máximo 2 de diferença por vídeo | `video_validation.json` |
+| Captura de movimento | Ritmo rápido/lento como desvio (1 participante) | Regra de ritmo: 2 de 3 desvios, sem falso alarme | `video_summary.json`, `reports/physio_S01.html` |
+| Fusão | Eventos de todos os módulos por paciente, janela de 24 h | 14.545 eventos → 2.051 alertas (12 *critical*, 1.126 *high*, 913 *medium*); 18 multimodais | `fusion_summary.json`, `alerts.csv` |
+| Azure | Contador mensal | 256 s de áudio (1,4% da cota) e 24 registros de texto (0,5%) | `audio_summary.json` |
 
-> Com os **dados de amostra** as métricas saem altas (ex.: acurácia 1,0), porque os dados
-> sintéticos são fáceis. **Resultados representativos vêm dos datasets reais.**
+Todos esses números aparecem nos gráficos de `python main.py figures` e no relatório técnico.
+
+> Com os **dados sintéticos** (seção 3.2) as métricas saem perto de 1,0, porque os dados são
+> fáceis. Os valores representativos são os da tabela acima, obtidos com os dados de exemplo.
 
 ---
 
@@ -869,10 +952,13 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | Erro 404 do Azure | Região (Speech) ou endpoint (Language) errados |
 | `Cota ... atingida` | O limite de segurança do mês foi alcançado; a análise local assume até o mês seguinte |
 | Erro ao instalar `torch`/`ultralytics` | Use Python 3.11 ou 3.12: `rm -rf .venv && py -3.12 -m venv .venv` |
+| `zip: command not found` (MSYS2) | Compacte com o Python: `python -c "import shutil; shutil.make_archive('figures', 'zip', 'results', 'figures')"` |
+| `results/figures` não aparece no VS Code | Abra a pasta do projeto (`code .` dentro dela). A pasta `results/` aparece em cinza porque não vai para o Git |
+| `figures` gera menos de 10 gráficos | Falta rodar algum comando antes (`all` e `video-validation`) ou o Azure não está configurado (sem WER) |
 
 ---
 
-## 13. Limitações conhecidas
+## 13. Observações sobre os dados de exemplo
 
 - As bases de exemplo são de pessoas diferentes: para demonstrar a fusão, cada **paciente virtual**
   combina registros de bases distintas. Com dados de um mesmo paciente, a fusão usa o id real.

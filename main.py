@@ -10,6 +10,7 @@ Comandos:
     python main.py fusion      # pacientes virtuais + fusão + alertas
     python main.py all         # tudo acima, em ordem
     python main.py monitor     # simulação de tempo real dos sinais vitais no terminal
+    python main.py figures     # gráficos dos resultados para o relatório (results/figures)
     streamlit run dashboard/app.py
 """
 import argparse
@@ -18,7 +19,7 @@ import json
 
 def main():
     parser = argparse.ArgumentParser(description="Hospital AI — multimodal patient monitoring")
-    parser.add_argument("command", choices=["inspect", "clinical", "audio", "video", "video-validation", "fusion", "all", "monitor"])
+    parser.add_argument("command", choices=["inspect", "clinical", "audio", "video", "video-validation", "fusion", "all", "monitor", "figures"])
     parser.add_argument("--exercises", default="1,6", help="video-validation: ids dos exercícios (1=arm abduction ... 6=squats)")
     parser.add_argument("--max-videos", type=int, default=4, help="video-validation: máximo de vídeos por exercício")
     parser.add_argument("--rows", type=int, default=None, help="máximo de falas da base de fala")
@@ -52,6 +53,10 @@ def main():
     if args.command in ("fusion", "all"):
         from src.fusion import run_fusion
         run_fusion()
+
+    if args.command == "figures":
+        from src.report_figures import run_figures
+        print(json.dumps(run_figures(), indent=2))
 
     if args.command == "monitor":
         import pandas as pd
