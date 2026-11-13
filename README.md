@@ -38,7 +38,7 @@ substituí-las.
 > ⚠️ Projeto de pesquisa e demonstração. Não é um dispositivo médico e não deve orientar
 > decisões clínicas.
 
-📐 **Arquitetura:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📊 **Resultados:** [seção 11](#11-resultados-e-como-são-medidos) · 📄 **Relatório técnico:** [docs/relatorio_tecnico_hospital_ai.pdf](docs/relatorio_tecnico_hospital_ai.pdf) · 📖 **Termos técnicos:** [Glossário](#15-glossário)
+📐 **Arquitetura:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📊 **Resultados:** [seção 11](#11-resultados-e-como-são-medidos) · 📄 **Relatório técnico:** [docs/relatorio_tecnico_hospital_ai.pdf](docs/relatorio_tecnico_hospital_ai.pdf) · 📖 **Termos técnicos:** [Glossário](#13-glossário)
 
 ## ⚡ Uso rápido
 
@@ -105,6 +105,8 @@ python main.py figures
 
 **Passo 11 — Ver os resultados**
 ```bash
+python main.py summary                            # métricas principais de cada módulo
+python main.py alerts --level critical            # alertas mais graves
 start results/reports/video_validation.html       # relatório HTML (Linux: xdg-open | macOS: open)
 explorer.exe "$(cygpath -w results/figures)"      # pasta dos gráficos (Windows)
 python -m streamlit run dashboard/app.py          # painel em http://localhost:8501 (Ctrl+C encerra)
@@ -122,8 +124,7 @@ python -m streamlit run dashboard/app.py          # painel em http://localhost:8
 | 9 · `video-validation` | Agachamento com ROC-AUC 0,79; contagem a até 2 repetições do gabarito |
 | 10 · `figures` | `10 gráficos em .../results/figures` |
 
-Algo deu errado? Veja a [Solução de problemas](#12-solução-de-problemas). Para analisar mais dados
-além dos exemplos, veja onde colocá-los na [seção 3.2](#32-usando-mais-dados).
+Para analisar mais dados além dos exemplos, veja onde colocá-los na [seção 3.2](#32-usando-mais-dados).
 
 ---
 
@@ -141,11 +142,9 @@ além dos exemplos, veja onde colocá-los na [seção 3.2](#32-usando-mais-dados
 9. [Arquivos gerados](#9-arquivos-gerados)
 10. [Arquitetura](#10-arquitetura)
 11. [Resultados e como são medidos](#11-resultados-e-como-são-medidos)
-12. [Solução de problemas](#12-solução-de-problemas)
-13. [Observações sobre os dados de exemplo](#13-observações-sobre-os-dados-de-exemplo)
-14. [Licenças das ferramentas](#14-licenças-das-ferramentas)
-15. [Glossário](#15-glossário)
-16. [Referências](#16-referências)
+12. [Licenças das ferramentas](#12-licenças-das-ferramentas)
+13. [Glossário](#13-glossário)
+14. [Referências](#14-referências)
 
 ---
 
@@ -284,48 +283,12 @@ python main.py all
 
 ### 3.3 Verificação dos resultados
 
-Depois de executar o [Uso rápido](#-uso-rápido), o comando abaixo lê os arquivos de resultado e
-mostra as principais métricas de cada módulo, para comparar com os valores de referência da
+Depois de executar o [Uso rápido](#-uso-rápido), o comando abaixo mostra as principais métricas
+de cada módulo, lidas dos arquivos de resultado, para comparar com os valores de referência da
 [seção 11](#11-resultados-e-como-são-medidos):
 
 ```bash
-python - <<'EOF'
-import json
-from pathlib import Path
-
-r = Path("results")
-def load(name):
-    f = r / name
-    return json.loads(f.read_text()) if f.exists() else None
-
-clin = load("clinical_summary.json")
-if clin:
-    rec = [v["recall"] for v in clin["injection_evaluation"].values()]
-    print(f"Clínico ........ {clin['patient_hours']} horas-paciente | recall {min(rec):.2f} a {max(rec):.2f}")
-
-audio = load("audio_summary.json")
-if audio:
-    best = audio["classifier"]["best_model"]
-    auc = audio["classifier"]["metrics"][best]["roc_auc"]
-    wer = audio.get("azure_stt_wer_by_group")
-    ok = isinstance(wer, dict) and all(isinstance(v, dict) for v in wer.values())
-    wer_txt = " | ".join(f"WER {g} {v['mean']:.2f}" for g, v in wer.items()) if ok else "sem WER"
-    print(f"Áudio .......... {audio['utterances']} falas, {audio['speakers']} falantes | ROC-AUC {auc:.2f} | {wer_txt}")
-
-val = load("video_validation.json")
-if val:
-    for ex, res in val["exercises"].items():
-        print(f"Vídeo .......... {ex}: {res['repetitions']} repetições | ROC-AUC {res['logistic_leave_one_person_out']['roc_auc']:.2f}")
-    c = val["repetition_counting"]
-    print(f"Contagem ....... {sum(x['detected_reps'] or 0 for x in c)} contadas para {sum(x['ground_truth_reps'] for x in c)} do gabarito")
-
-fus = load("fusion_summary.json")
-if fus:
-    print(f"Fusão .......... {fus['events']} eventos -> {fus['alerts']} alertas {fus['alerts_by_level']}")
-
-figs = sorted((r / "figures").glob("*.png")) if (r / "figures").exists() else []
-print(f"Gráficos ....... {len(figs)} arquivos em results/figures")
-EOF
+python main.py summary
 ```
 
 Um módulo que não aparece na saída ainda não foi executado.
@@ -368,7 +331,7 @@ são padronizados em inglês** (nomes de colunas, rótulos, eventos e alertas).
 | **Base de vídeos de exercícios** | Vídeos de 10 pessoas em 6 exercícios de fisioterapia, cada repetição marcada por fisioterapeuta como correta ou incorreta | Postura em vídeo real (OpenPose/YOLOv8) e detecção de execução incorreta | `videos.zip`, `Segmentation.csv`, `Segmentation.txt` | [4] |
 | **Consultas** | 12 roteiros de consulta em inglês escritos para o projeto, com sintomas, termos críticos e tons diferentes | Transcrição (Speech to Text) e análise de texto | já incluídos em `data/consultations/` | — |
 
-Nomes, autores, links e licenças estão nas [Referências](#16-referências).
+Nomes, autores, links e licenças estão nas [Referências](#14-referências).
 
 ### 4.3 Estrutura das pastas
 
@@ -513,6 +476,9 @@ Sempre a partir da pasta do projeto, com o ambiente ativo (`source .venv/Scripts
 | `python main.py all` | `clinical` → `audio` → `video` → `fusion` |
 | `python main.py monitor` | Simulação de tempo real dos sinais vitais no terminal |
 | `python main.py figures` | Gráficos dos resultados em `results/figures/` |
+| `python main.py summary` | Métricas principais de cada módulo no terminal |
+| `python main.py alerts` | Fila de alertas (`--level critical`, `--limit 20`) |
+| `python main.py consultations` | Resultado da análise de cada consulta |
 | `python -m streamlit run dashboard/app.py` | Dashboard no navegador |
 
 > Ordem obrigatória: `fusion`, `monitor` e o dashboard leem o que os outros comandos geraram.
@@ -578,14 +544,9 @@ Eventos: `dysarthria_risk`, `fatigue_indicator`, `breathing_difficulty_indicator
 Saídas: `results/audio_summary.json`, `voice_features.csv`, `voice_indicators.csv`,
 `consultations.json`, `speech_azure_stt.csv` (se o Speech estiver ativo).
 
-Conferir se o Azure foi usado:
+Ver o resultado de cada consulta (origem da transcrição, sentimento e termos):
 ```bash
-python - <<'EOF'
-import json
-for c in json.load(open("results/consultations.json")):
-    print(c["consultation_id"], c["transcript_source"], c["sentiment"], c["sentiment_source"],
-          c["critical_terms"], "| negados:", c["negated_terms"])
-EOF
+python main.py consultations
 ```
 `transcript_source`: `azure`/`cache` = Speech to Text usado; `script` = sem `.wav` (texto do roteiro).
 `sentiment_source`: `azure_sentiment` = Azure AI Language; `local_lexicon` = análise local (cota do mês esgotada).
@@ -676,11 +637,10 @@ Tempo: cerca de 1 a 2 minutos por vídeo na primeira vez.
 
 ### Zonas críticas por vídeo
 
-Para ajustar as zonas a um vídeo específico, crie um JSON com o mesmo nome do vídeo:
-```bash
-cat > data/physio_videos/squat_rehab01.zones.json <<'EOF'
+Para ajustar as zonas a um vídeo específico, crie ao lado dele um arquivo JSON com o mesmo nome
+e a extensão `.zones.json` (ex.: `squat_rehab01.mp4` → `squat_rehab01.zones.json`):
+```json
 {"exercise_area": [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]], "fall_risk_floor": null}
-EOF
 ```
 Coordenadas de 0 a 1 (`(0,0)` = canto superior esquerdo); `null` desliga a zona.
 
@@ -699,14 +659,10 @@ python main.py fusion
    0,5 não entram na fusão, e *high* exige confirmação: dois tipos de sinal diferentes, NEWS2
    elevado ou mais de uma modalidade alterada.
 
-Ver os alertas no terminal:
+Ver os alertas no terminal, dos mais graves para os menos graves:
 ```bash
-python - <<'EOF'
-import pandas as pd
-a = pd.read_csv("results/alerts.csv")
-print(a["level"].value_counts())
-print(a[a["level"] == "critical"][["patient_id", "timestamp", "modalities", "top_events"]].head(10).to_string())
-EOF
+python main.py alerts                              # contagem por nível + 10 primeiros alertas
+python main.py alerts --level critical --limit 20  # só os critical
 ```
 
 ### 6.6 `monitor` — tempo real no terminal
@@ -764,48 +720,41 @@ Depois de rodar o pipeline de novo, clique em **Reload results** na barra latera
 
 ## 7. Tutorial das funções (uso direto em Python)
 
-Todas as funções podem ser usadas isoladamente, por exemplo num notebook ou num script.
-Rode os exemplos a partir da pasta do projeto, com o ambiente ativo. Os blocos
-`python - <<'EOF' ... EOF` executam o código Python direto no bash.
+Todas as funções podem ser usadas isoladamente, num script ou notebook. A pasta `examples/` traz
+um script pronto para cada caso; rode a partir da pasta do projeto, com o ambiente ativo.
+
+| Script | O que demonstra |
+|---|---|
+| `python examples/event_example.py` | Criar um evento no formato único e ler os eventos gravados |
+| `python examples/vital_stream_example.py` | Detector de sinais vitais recebendo uma leitura por vez |
+| `python examples/text_terms_example.py "texto"` | Termos críticos e negação num texto (`--azure` usa o Text Analytics for health) |
+| `python examples/voice_features_example.py audio.wav` | Características de voz de um arquivo WAV |
+| `python examples/single_video_example.py video.mp4` | Análise completa de um único vídeo |
+| `python examples/motion_capture_example.py` | Listar e ler os arquivos de captura de movimento |
+
+Exemplo de uso de uma função num script próprio:
+```python
+from src.clinical.vitals import VitalStreamDetector
+
+detector = VitalStreamDetector()
+score, event_type, evidence = detector.update("bed_1", "spo2", 88)
+```
 
 ### 7.1 Núcleo (`src/core/`)
 
-**`Event`, `save_events`, `load_events`, `clear_events`** — formato único de evento:
-```bash
-python - <<'EOF'
-from src.core.events import Event, save_events, load_events
-ev = Event(patient_id="clinical:10000032", timestamp="2150-01-01T10:00:00",
-           modality="clinical", source="vitals", event_type="spo2_low",
-           score=0.85, message="spo2 = 86.0")
-print(ev.severity)            # "high" (calculado a partir do score)
-print(len(load_events()), "eventos salvos em results/events.jsonl")
-EOF
-```
-`save_events(lista)` anexa ao arquivo; `clear_events("audio")` apaga só os eventos de uma modalidade.
-
-**Azure (`src/core/azure_client.py`):**
-
-| Função | Retorno |
+| Função | O que faz |
 |---|---|
-| `speech_enabled()` / `language_enabled()` | `True` se as chaves estão no `.env` |
-| `to_wav16k_bytes(samples, sr)` | Converte um áudio em WAV 16 kHz mono (formato do Azure) |
-| `speech_to_text(wav_bytes)` | `{"text", "confidence", "source"}` ou `None` (áudio de até 60 s) |
-| `analyze_sentiment(text)` | `{"sentiment", "scores", "sentences"}` ou `None` |
-| `analyze_health(text)` | `{"entities": [{"text", "category", "confidence", "assertion"}]}` ou `None` |
-| `usage_summary()` | Uso do mês e limites de segurança |
-
-```bash
-python - <<'EOF'
-from src.core import azure_client as az
-print(az.usage_summary())
-r = az.analyze_health("Patient denies chest pain but reports shortness of breath.")
-if r: [print(e["text"], e["category"], e["assertion"]) for e in r["entities"]]
-EOF
-```
-(gasta 1 registro da cota na primeira execução; nas próximas lê do cache)
-
-**Relatórios (`src/core/report.py`):** `write_report(nome_arquivo, titulo, secoes)`, em que cada
-seção é `{"heading": ..., "text": ..., "table": DataFrame, "images": [fig_to_b64(fig)]}`.
+| `events.Event(...)` | Evento no formato único; a gravidade é calculada a partir da pontuação |
+| `events.save_events(lista)` | Anexa eventos a `results/events.jsonl` |
+| `events.load_events()` | Lê todos os eventos gravados |
+| `events.clear_events("audio")` | Apaga só os eventos de uma modalidade |
+| `azure_client.speech_enabled()` / `language_enabled()` | `True` se as chaves estão no `.env` |
+| `azure_client.to_wav16k_bytes(samples, sr)` | Converte um áudio em WAV 16 kHz mono (formato do Azure) |
+| `azure_client.speech_to_text(wav_bytes)` | `{"text", "confidence", "source"}` ou `None` (áudio de até 60 s) |
+| `azure_client.analyze_sentiment(text)` | `{"sentiment", "scores", "sentences"}` ou `None` |
+| `azure_client.analyze_health(text)` | `{"entities": [{"text", "category", "confidence", "assertion"}]}` ou `None` |
+| `azure_client.usage_summary()` | Uso do mês e limites de segurança |
+| `report.write_report(nome, titulo, secoes)` | Relatório HTML; cada seção tem `heading`, `text`, `table` e `images` |
 
 ### 7.2 Clínico (`src/clinical/`)
 
@@ -823,17 +772,6 @@ seção é `{"heading": ..., "text": ..., "table": DataFrame, "images": [fig_to_
 | `prescriptions.detect_prescription_events(rx)` | Eventos de prescrição + tabela de características |
 | `transfers.detect_transfer_events(tr)` | Eventos de transferência + matriz de probabilidades |
 
-Exemplo — detector em tempo real, um ponto por vez:
-```bash
-python - <<'EOF'
-from src.clinical.vitals import VitalStreamDetector
-det = VitalStreamDetector()
-for spo2 in [97, 96, 97, 98, 97, 96, 97, 88]:      # última leitura cai de repente
-    score, tipo, ev = det.update("leito_1", "spo2", spo2)
-    print(spo2, "->", round(score, 2), tipo, ev)
-EOF
-```
-
 ### 7.3 Áudio (`src/audio/`)
 
 | Função | O que faz |
@@ -848,29 +786,6 @@ EOF
 | `consultations.transcribe(audio, sr)` | Transcreve com o Azure trecho a trecho |
 | `pipeline.word_error_rate(ref, hyp)` | WER entre o texto esperado e o transcrito |
 
-Exemplo — analisar um `.wav` qualquer:
-```bash
-python - <<'EOF'
-import numpy as np
-from scipy.io import wavfile
-from src.audio.features import extract_features
-sr, y = wavfile.read("data/consultations/consult_01.wav")   # troque pelo seu arquivo
-y = y / np.iinfo(y.dtype).max if np.issubdtype(y.dtype, np.integer) else y
-f = extract_features(y, sr)
-for k in ("speech_rate_sps", "pause_ratio", "long_pauses", "f0_mean_hz", "jitter", "shimmer", "hnr_db"):
-    print(f"{k:18} {f[k]:.3f}")
-EOF
-```
-
-Exemplo — termos críticos de um texto (sem Azure):
-```bash
-python - <<'EOF'
-from src.audio.text_analysis import local_critical_terms
-for t in local_critical_terms("No fever. I have chest pain and I feel short of breath."):
-    print(t["text"], "| negado:", t["negated"], "| peso:", t["weight"])
-EOF
-```
-
 ### 7.4 Vídeo (`src/video/`)
 
 | Função | O que faz |
@@ -884,29 +799,6 @@ EOF
 | `vision.frame_angles(pontos)` | Ângulos de joelho, quadril, ombro, cotovelo e inclinação do tronco |
 | `vision.analyze_angles(df, exercicio, fps)` | Amplitude, assimetria, repetições, queda |
 | `vision.analyze_video(caminho)` | Vídeo completo: pose + YOLOv8 + zonas → resumo, achados, ângulos, fotos |
-
-Exemplo — analisar um único vídeo sem rodar o pipeline todo:
-```bash
-python - <<'EOF'
-from pathlib import Path
-from src.video.vision import analyze_video
-res = analyze_video(Path("data/physio_videos/squat_teste01.mp4"))
-print(res["summary"])
-for f in res["findings"]:
-    print(f["event_type"], round(f["score"], 2), f["message"])
-EOF
-```
-
-Exemplo — ler um arquivo de captura de movimento:
-```bash
-python - <<'EOF'
-from src.video.amc import index_motion_capture, parse_amc
-idx = index_motion_capture()
-print(idx.head())
-df = parse_amc(idx.iloc[0]["path"])
-print(df.shape, list(df.columns)[:8])
-EOF
-```
 
 ### 7.5 Fusão (`src/fusion.py`)
 
@@ -1001,44 +893,7 @@ Todos esses números aparecem nos gráficos de `python main.py figures` e no rel
 
 ---
 
-## 12. Solução de problemas
-
-| Problema | Solução |
-|---|---|
-| `source .venv/Scripts/activate: No such file or directory` | Você não está na pasta do projeto: `cd` até onde estão `main.py` e `.venv` |
-| `streamlit: command not found` | Ative o ambiente e use `python -m streamlit run dashboard/app.py` |
-| `(.venv)` não aparece | Cada terminal novo precisa de `source .venv/Scripts/activate` |
-| `python: command not found` ou abre a Microsoft Store | Reinstale o Python marcando "Add python.exe to PATH" e reabra o terminal |
-| Projeto lê a pasta errada de dados | `echo $HOSPITAL_AI_DATASETS` mostra a pasta em uso; `unset HOSPITAL_AI_DATASETS` volta para `datasets/` |
-| `Tabela 'chartevents' não encontrada` | As pastas `hosp/` e `icu/` devem estar dentro de `datasets/clinical/` |
-| `Nenhum .parquet da base de fala` | Coloque o `.parquet` direto em `datasets/speech/` |
-| `Nenhum .amc da captura de movimento` | Extraia os zips dentro de `datasets/motion_capture/` (devem aparecer `S01/`, `S02/`...) |
-| Vídeo com 0 quadros analisados | O OpenCV não reconhece o formato do arquivo: exporte o vídeo novamente em MP4 (H.264) |
-| `pose_visible_fraction` muito baixo | O vídeo não mostra uma pessoa real ou o corpo está cortado |
-| `Estimador de pose: yolov8-pose` | O OpenPose não foi baixado (servidor da CMU fora do ar). Funciona igual; para usar o OpenPose, coloque `pose_iter_440000.caffemodel` em `models/openpose/` |
-| Erro 401 do Azure | Chave errada no `.env` |
-| Erro 404 do Azure | Região (Speech) ou endpoint (Language) errados |
-| `Cota ... atingida` | O limite de segurança do mês foi alcançado; a análise local assume até o mês seguinte |
-| Erro ao instalar `torch`/`ultralytics` | Use Python 3.11 ou 3.12: `rm -rf .venv && py -3.12 -m venv .venv` |
-| `zip: command not found` (MSYS2) | Compacte com o Python: `python -c "import shutil; shutil.make_archive('figures', 'zip', 'results', 'figures')"` |
-| `results/figures` não aparece no VS Code | Abra a pasta do projeto (`code .` dentro dela). A pasta `results/` aparece em cinza porque não vai para o Git |
-| `figures` gera menos de 10 gráficos | Falta rodar algum comando antes (`all` e `video-validation`) ou o Azure não está configurado (sem WER) |
-
----
-
-## 13. Observações sobre os dados de exemplo
-
-- As bases de exemplo são de pessoas diferentes: para demonstrar a fusão, cada **paciente virtual**
-  combina registros de bases distintas. Com dados de um mesmo paciente, a fusão usa o id real.
-- Cansaço e dificuldade respiratória são **indicadores** relativos ao próprio falante, sem
-  rótulo clínico.
-- Jitter e shimmer são aproximações por quadro, não o cálculo ciclo a ciclo do Praat.
-- "Tempo real" é a reprodução de dados históricos na ordem em que aconteceram.
-- O Azure AI Anomaly Detector foi desativado em 01/10/2026; por isso a detecção de anomalias é local.
-
----
-
-## 14. Licenças das ferramentas
+## 12. Licenças das ferramentas
 
 | Ferramenta | Licença / condição |
 |---|---|
@@ -1049,7 +904,7 @@ Todos esses números aparecem nos gráficos de `python main.py figures` e no rel
 
 ---
 
-## 15. Glossário
+## 13. Glossário
 
 | Termo | O que é | Onde aparece no projeto |
 |---|---|---|
@@ -1085,7 +940,7 @@ Todos esses números aparecem nos gráficos de `python main.py figures` e no rel
 
 ---
 
-## 16. Referências
+## 14. Referências
 
 ### Bases de dados de exemplo
 
@@ -1095,13 +950,3 @@ Todos esses números aparecem nos gráficos de `python main.py figures` e no rel
 | [2] | Base de fala | **TORGO Database** — Rudzicz, F., Namasivayam, A. K., Wolff, T., University of Toronto. Cópia em Parquet: https://huggingface.co/datasets/abnerh/TORGO-database | Conforme os autores (verificar antes de redistribuir) |
 | [3] | Base de captura de movimento | **UL-RED — University of Liverpool Rehabilitation Exercise Dataset**, *Scientific Data* 12:761 (2025). https://datacat.liverpool.ac.uk/2729/ | CC BY 4.0 |
 | [4] | Base de vídeos de exercícios | **REHAB24-6** — Černek, A., Sedmidubsky, J., Budikova, P. *REHAB24-6: Physical Therapy Dataset for Analyzing Pose Estimation Methods*. SISAP 2024. https://zenodo.org/records/13305826 | CC BY-NC 4.0 |
-
-### Métodos e serviços
-
-- Royal College of Physicians. *National Early Warning Score (NEWS) 2*, 2017 — escore de alerta precoce usado nos sinais vitais.
-- Liu, F. T., Ting, K. M., Zhou, Z.-H. *Isolation Forest*. IEEE ICDM, 2008 — detecção de anomalias sem rótulos.
-- Cao, Z. et al. *OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields*. IEEE TPAMI, 2019.
-- Ultralytics YOLOv8 — https://docs.ultralytics.com
-- Azure AI Speech — https://learn.microsoft.com/azure/ai-services/speech-service/
-- Azure AI Language, Text Analytics for health — https://learn.microsoft.com/azure/ai-services/language-service/text-analytics-for-health/overview
-- Desativação do Azure AI Anomaly Detector (01/10/2026) — https://azure.microsoft.com/updates/ai-services-anomaly-detector-will-be-retired-on-1-october-2026

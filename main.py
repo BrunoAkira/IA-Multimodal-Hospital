@@ -11,6 +11,9 @@ Comandos:
     python main.py all         # tudo acima, em ordem
     python main.py monitor     # simulação de tempo real dos sinais vitais no terminal
     python main.py figures     # gráficos dos resultados para o relatório (results/figures)
+    python main.py summary     # métricas principais de cada módulo no terminal
+    python main.py alerts      # fila de alertas (--level critical --limit 10)
+    python main.py consultations  # resultado da análise de cada consulta
     streamlit run dashboard/app.py
 """
 import argparse
@@ -19,11 +22,14 @@ import json
 
 def main():
     parser = argparse.ArgumentParser(description="Hospital AI — multimodal patient monitoring")
-    parser.add_argument("command", choices=["inspect", "clinical", "audio", "video", "video-validation", "fusion", "all", "monitor", "figures"])
+    parser.add_argument("command", choices=["inspect", "clinical", "audio", "video", "video-validation", "fusion", "all", "monitor", "figures",
+                                            "summary", "alerts", "consultations"])
     parser.add_argument("--exercises", default="1,6", help="video-validation: ids dos exercícios (1=arm abduction ... 6=squats)")
     parser.add_argument("--max-videos", type=int, default=4, help="video-validation: máximo de vídeos por exercício")
     parser.add_argument("--rows", type=int, default=None, help="máximo de falas da base de fala")
     parser.add_argument("--speed", type=float, default=0.2, help="segundos reais por hora simulada (monitor)")
+    parser.add_argument("--level", choices=["medium", "high", "critical"], default=None, help="alerts: mostra só um nível")
+    parser.add_argument("--limit", type=int, default=10, help="alerts: quantos alertas mostrar")
     parser.add_argument("--hours", type=int, default=None, help="limite de horas simuladas (monitor; padrão = todas)")
     args = parser.parse_args()
 
@@ -53,6 +59,18 @@ def main():
     if args.command in ("fusion", "all"):
         from src.fusion import run_fusion
         run_fusion()
+
+    if args.command == "summary":
+        from src.results_view import print_summary
+        print_summary()
+
+    if args.command == "alerts":
+        from src.results_view import print_alerts
+        print_alerts(args.level, args.limit)
+
+    if args.command == "consultations":
+        from src.results_view import print_consultations
+        print_consultations()
 
     if args.command == "figures":
         from src.report_figures import run_figures

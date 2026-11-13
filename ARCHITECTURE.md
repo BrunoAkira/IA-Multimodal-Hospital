@@ -1,7 +1,7 @@
 # Arquitetura — Hospital AI
 
 Como o sistema é organizado, em linguagem simples. Para instalar e usar, veja o [README](README.md);
-para o significado dos termos técnicos (NEWS2, Isolation Forest, DTW...), veja o [Glossário](README.md#15-glossário).
+para o significado dos termos técnicos (NEWS2, Isolation Forest, DTW...), veja o [Glossário](README.md#13-glossário).
 
 ---
 
@@ -165,7 +165,7 @@ flowchart LR
 
 | Pasta / arquivo | O que tem |
 |---|---|
-| `main.py` | Comandos do sistema (`clinical`, `audio`, `video`, `video-validation`, `fusion`, `all`, `figures`...) |
+| `main.py` | Comandos do sistema (`clinical`, `audio`, `video`, `video-validation`, `fusion`, `all`, `figures`, `summary`, `alerts`...) |
 | `src/config.py` | Todos os ajustes num lugar só: limites clínicos, pesos, janelas |
 | `src/clinical/` | Análise clínica |
 | `src/audio/` | Análise de voz e texto |
@@ -174,6 +174,8 @@ flowchart LR
 | `src/core/azure_client.py` | Conexão com o Azure, cache e controle de cota |
 | `src/fusion.py` | Central de alertas |
 | `src/report_figures.py` | Gráficos dos resultados para o relatório (`python main.py figures`) |
+| `src/results_view.py` | Resumo, alertas e consultas no terminal (`summary`, `alerts`, `consultations`) |
+| `examples/` | Scripts curtos que mostram como usar cada função isoladamente |
 | `dashboard/app.py` | Painel da equipe |
 | `example_data/` | Amostras reais pequenas de cada tipo de dado, para rodar o projeto direto do repositório |
 | `scripts/build_example_data.py` | Gera `example_data/` a partir das bases completas |
