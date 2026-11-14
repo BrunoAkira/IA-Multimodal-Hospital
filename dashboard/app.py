@@ -139,8 +139,18 @@ elif page == "Clinical":
     st.json(s["events"])
     if "injection_evaluation" in s:
         st.subheader("Detector evaluation with injected anomalies")
-        st.dataframe(pd.DataFrame(s["injection_evaluation"]).T)
-        st.caption("Precision is conservative: 'false positives' include real anomalies in the clinical data.")
+        ev = s["injection_evaluation"]
+        st.dataframe(pd.DataFrame({v: {k: m[k] for k in ("injected", "precision", "recall")} for v, m in ev.items()}).T)
+        st.caption("Precision is relative to the injected anomalies: real anomalies already in the data count as false positives.")
+        # curva de limiares: uma linha por (sinal vital, limiar)
+        curve = [{"vital": v, "threshold": t, **c} for v, m in ev.items()
+                 for t, c in (m.get("threshold_metrics") or {}).items()]
+        if curve:
+            st.subheader("Precision and recall by score threshold")
+            curve_df = pd.DataFrame(curve)
+            st.plotly_chart(px.line(curve_df, x="threshold", y=["precision", "recall"], facet_col="vital",
+                                    markers=True, title="Trade-off between alerts and recall"))
+            st.dataframe(curve_df, hide_index=True)
     ce = events[events["modality"] == "clinical"]
     st.plotly_chart(px.histogram(ce, x="event_type", color="source", title="Clinical events"),
                     )

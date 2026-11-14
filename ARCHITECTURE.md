@@ -145,6 +145,10 @@ flowchart LR
 - Cada alerta traz a ação sugerida: **critical** → avaliação imediata; **high** → avaliação à beira
   do leito em até 1 h; **medium** → revisão na próxima visita.
 
+**Limite da demonstração:** `fusion` processa em lote os eventos já salvos. O comando `monitor` e o
+componente Live monitor do painel fazem replay de sinais vitais históricos; eles não representam
+ingestão contínua nem fusão multimodal em tempo real.
+
 ---
 
 ## 6. Uso do Azure

@@ -18,7 +18,7 @@ substituí-las.
 | 🗣️ **Voz** | Sinais de disartria, cansaço e dificuldade respiratória na fala, comparando cada gravação com a voz habitual da pessoa |
 | 📝 **Consultas** | Transcrição do áudio, extração de sintomas, diagnósticos e medicamentos (separando o que foi negado, como "no fever") e sentimento do paciente |
 | 🎥 **Fisioterapia em vídeo** | Postura e ângulos das articulações, contagem de repetições, execução incorreta, assimetria e áreas de risco (objetos no chão, paciente fora da área do exercício) |
-| 🚨 **Alertas** | Fusão de tudo por paciente em janela de 24 h, com níveis *medium*, *high* e *critical*, painel em tempo real e relatórios automáticos em HTML |
+| 🚨 **Alertas** | Fusão de tudo por paciente em janela de 24 h, com níveis *medium*, *high* e *critical*, painel local com replay simulado dos sinais vitais e relatórios automáticos em HTML |
 
 ## Destaques
 
@@ -38,7 +38,7 @@ substituí-las.
 > ⚠️ Projeto de pesquisa e demonstração. Não é um dispositivo médico e não deve orientar
 > decisões clínicas.
 
-📐 **Arquitetura:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📊 **Resultados:** [seção 11](#11-resultados-e-como-são-medidos) · 📄 **Relatório técnico:** [docs/relatorio_tecnico_hospital_ai.pdf](docs/relatorio_tecnico_hospital_ai.pdf) · 📖 **Termos técnicos:** [Glossário](#13-glossário)
+📐 **Arquitetura:** [ARCHITECTURE.md](ARCHITECTURE.md) · 📊 **Resultados:** [seção 11](#11-resultados-e-como-são-medidos) · 📄 **Relatório técnico:** [docs/relatorio_tecnico_hospital_ai.pdf](docs/relatorio_tecnico_hospital_ai.pdf) · ⚠️ **Limites da validação:** [docs/ESCOPO_DA_VALIDACAO.md](docs/ESCOPO_DA_VALIDACAO.md) · 📖 **Termos técnicos:** [Glossário](#13-glossário)
 
 ## ⚡ Uso rápido
 
@@ -508,10 +508,13 @@ e os eventos em `results/events.jsonl`.
 
 Como ler a avaliação no terminal:
 ```
-'spo2': {'injected': 240, 'precision': 0.407, 'recall': 0.933}
+'spo2': {'injected': 240, 'precision': 0.407, 'recall': 0.933,
+         'threshold_metrics': {'0.50': {...}, '0.60': {...}, ...}}
 ```
-→ foram injetadas 240 anomalias artificiais de SpO₂ e o detector encontrou 93% delas.
-A precisão é conservadora: os "falsos positivos" incluem anomalias reais que já existem nos dados.
+→ foram injetadas 240 anomalias artificiais de SpO₂ e, no limiar de pontuação 0,50, o detector encontrou 93% delas.
+`threshold_metrics` mostra precisão, recall, F1 e total de medições sinalizadas nos limiares de 0,50 a 0,90. Um limiar maior reduz ou mantém o número de alertas e pode reduzir o recall; use a curva para discutir esse compromisso, sem escolher um limiar só pelo resultado neste mesmo conjunto. A curva é diagnóstica: ela não altera o limiar 0,50 usado na geração dos eventos.
+
+Esses números medem a recuperação das anomalias artificiais, não a precisão clínica. A base original não tem rótulos revisados por especialistas; por isso, eventos reais que já existiam nos dados também são contados como falsos positivos. Para estimar precisão clínica e escolher um limiar operacional, é necessário avaliar em dados separados e rotulados por profissionais de saúde.
 
 ### 6.3 `audio` — voz e consultas
 
@@ -660,15 +663,15 @@ python main.py alerts                              # contagem por nível + 10 pr
 python main.py alerts --level critical --limit 20  # só os critical
 ```
 
-### 6.6 `monitor` — tempo real no terminal
+### 6.6 `monitor` — replay simulado de sinais vitais
 
 ```bash
 python main.py monitor                    # 0,2 s por hora simulada
 python main.py monitor --speed 0.05       # mais rápido
 python main.py monitor --hours 500        # para depois de 500 horas simuladas
 ```
-Reproduz os sinais vitais em ordem cronológica, como se chegassem do monitor à beira do leito,
-e imprime cada alerta na hora (amarelo = medium, vermelho = high). `Ctrl+C` encerra.
+Reproduz os sinais vitais históricos em ordem cronológica, como se chegassem do monitor à beira do leito,
+e imprime cada alerta na hora (amarelo = medium, vermelho = high). É uma simulação local; a fusão multimodal é executada em lote e não recebe áudio, vídeo e sinais vitais como um fluxo contínuo. `Ctrl+C` encerra.
 Precisa ter rodado `python main.py clinical` antes.
 
 ### 6.6b `figures` — gráficos dos resultados
@@ -698,7 +701,7 @@ Abra http://localhost:8501. Páginas:
 | Clinical | Eventos clínicos e avaliação por injeção |
 | Voice & text | Métricas do classificador, WER do Azure, características de voz, consultas |
 | Physio video | Repetições da captura de movimento, vídeos analisados, download dos relatórios |
-| Live monitor | Escolha um paciente e clique em ▶ Start: sinais vitais "chegando" em tempo real |
+| Live monitor | Escolha um paciente e clique em ▶ Start: replay simulado de sinais vitais históricos |
 
 Depois de rodar o pipeline de novo, clique em **Reload results** na barra lateral.
 `Ctrl+C` no terminal encerra o dashboard.
@@ -865,7 +868,7 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | Anomalias em prescrições | `src/clinical/prescriptions.py` |
 | Movimentação entre setores | `src/clinical/transfers.py` |
 | Fusão e alertas | `src/fusion.py` → `results/alerts.csv` |
-| Painel e monitor em tempo real | `dashboard/app.py`, `python main.py monitor` |
+| Painel local e replay simulado de sinais vitais | `dashboard/app.py`, `python main.py monitor` |
 
 ---
 
@@ -873,7 +876,7 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 
 | Módulo | Como medimos | Resultado com os dados de exemplo | Onde ver |
 |---|---|---|---|
-| Sinais vitais | Anomalias injetadas em 2% das medições de 100 pacientes (12.085 horas-paciente) | Recall de 80% a 93%; precisão de 19% a 41% | `clinical_summary.json` |
+| Sinais vitais | Anomalias artificiais injetadas em 2% das medições de 100 pacientes (12.085 horas-paciente); curva avaliada nos limiares de 0,50 a 0,90 | No limiar 0,50: recall de 80% a 93% e precisão estimada de 19% a 41%. No limiar 0,90: precisão de 34% a 66% e recall de 53% a 76%. A precisão não é clínica: a base não tem rótulos revisados, e anomalias preexistentes podem ser contadas como falsos positivos. | `clinical_summary.json` |
 | Voz | Classificador de disartria testado sempre num falante fora do treino (8 falantes, 1.380 falas) | Regressão logística: ROC-AUC 0,78, acurácia 75%, 158 de 240 falas com disartria reconhecidas | `audio_summary.json` |
 | Speech to Text | Taxa de erro de palavras (WER) em 60 falas | 24% sem alteração × 71% com disartria | `audio_summary.json`, `speech_azure_stt.csv` |
 | Texto das consultas | 12 consultas roteirizadas | 30 eventos de termos críticos e sentimento | `consultations.json` |

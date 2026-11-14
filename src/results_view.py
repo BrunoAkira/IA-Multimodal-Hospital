@@ -41,6 +41,12 @@ def print_summary():
         _line("Clínico", f"{clin['vital_measurements']:,} medições, {clin['patient_hours']:,} horas-paciente")
         if rec:
             _line("", f"recall {min(rec):.2f} a {max(rec):.2f} | precisão {min(prec):.2f} a {max(prec):.2f}")
+            for vital, metrics in ev.items():
+                curve = metrics.get("threshold_metrics") or {}
+                points = [f"{threshold}: P {curve[threshold]['precision']:.2f}/R {curve[threshold]['recall']:.2f}"
+                          for threshold in ("0.50", "0.70", "0.90") if threshold in curve]
+                if points:
+                    _line(f"  {vital}", " | ".join(points))
         _line("", "eventos " + ", ".join(f"{k} {v}" for k, v in clin["events"].items()))
 
     audio = _load_json("audio_summary.json")

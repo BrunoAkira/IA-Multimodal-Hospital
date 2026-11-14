@@ -33,6 +33,11 @@ models/*
 results/*
 !results/.gitkeep
 
+# arquivos locais de IDE e cópias de resultados na raiz
+.idea/
+.vscode/
+/alerts.csv
+
 # sistema
 .DS_Store
 Thumbs.db
