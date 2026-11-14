@@ -121,7 +121,7 @@ def clinical_injection(clin, saved):
     _save(fig, "f02_clinico_injecao.png", saved)
 
 
-def events_by_source(clin, audio, video, saved):
+def events_by_source(clin, audio, video, saved, val=None):
     """Quantos eventos cada fonte gerou (entrada da fusão)."""
     names = {"vitals": "Sinais vitais (regras e fluxo)", "vitals_multivariate": "Sinais vitais (multivariado)",
              "prescriptions": "Prescrições", "transfers": "Transferências", "audio": "Áudio (voz)",
@@ -133,6 +133,8 @@ def events_by_source(clin, audio, video, saved):
         counts.update({names[k]: v for k, v in audio["events"].items()})
     if video:
         counts["Vídeo"] = video.get("events", 0)
+    if val:
+        counts["Vídeo (validação com gabarito)"] = val.get("events", 0)
     if not counts:
         return
     items = sorted(counts.items(), key=lambda kv: kv[1])
@@ -296,7 +298,7 @@ def run_figures() -> dict:
     architecture(saved)
     if clin:
         clinical_injection(clin, saved)
-    events_by_source(clin, audio, video, saved)
+    events_by_source(clin, audio, video, saved, val)
     if audio:
         voice_metrics(audio, saved)
         transcription_wer(audio, saved)

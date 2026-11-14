@@ -51,7 +51,9 @@ def main():
         from src.video.pipeline import run_video
         print(json.dumps(run_video(), indent=2, default=str))
 
-    if args.command == "video-validation":
+    # no "all", a validação roda depois do vídeo e antes da fusão, para que as repetições
+    # incorretas também entrem nos alertas
+    if args.command in ("video-validation", "all"):
         from src.video.video_validation import run_video_validation
         ex = [int(x) for x in args.exercises.split(",") if x.strip()]
         print(json.dumps(run_video_validation(ex, args.max_videos), indent=2, default=str))

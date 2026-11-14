@@ -88,22 +88,17 @@ Os outros dados de exemplo já vêm no repositório, na pasta `data/` ([seção 
 python main.py inspect
 ```
 
-**Passo 8 — Rodar a análise completa** (clínico → áudio → vídeo → fusão e alertas)
+**Passo 8 — Rodar a análise completa** (clínico → áudio → vídeo → validação do vídeo com gabarito → fusão e alertas)
 ```bash
 python main.py all
 ```
 
-**Passo 9 — Validar o vídeo contra o gabarito do fisioterapeuta**
-```bash
-python main.py video-validation
-```
-
-**Passo 10 — Gerar os gráficos dos resultados**
+**Passo 9 — Gerar os gráficos dos resultados**
 ```bash
 python main.py figures
 ```
 
-**Passo 11 — Ver os resultados**
+**Passo 10 — Ver os resultados**
 ```bash
 python main.py summary                            # métricas principais de cada módulo
 python main.py alerts --level critical            # alertas mais graves
@@ -120,9 +115,9 @@ python -m streamlit run dashboard/app.py          # painel em http://localhost:8
 | 8 · clínico | `72,826 medições -> 12,085 horas-paciente`; recall de 0,80 a 0,93 |
 | 8 · áudio | `1380 falas de 8 falantes`; ROC-AUC ~0,78; WER ~0,24 (controle) e ~0,71 (disartria) |
 | 8 · vídeo | 2 vídeos com `pose_visible_fraction` 1.0 e relatórios `video_*.html` |
-| 8 · fusão | ~14.200 eventos e ~1.970 alertas, 9 *critical* |
-| 9 · `video-validation` | Agachamento com ROC-AUC 0,79; contagem a até 2 repetições do gabarito |
-| 10 · `figures` | `10 gráficos em .../results/figures` |
+| 8 · validação do vídeo | Agachamento com ROC-AUC 0,79; contagem a até 2 repetições do gabarito |
+| 8 · fusão | ~14.300 eventos e ~1.980 alertas, 15 *critical* |
+| 9 · `figures` | `10 gráficos em .../results/figures` |
 
 Para analisar mais dados além dos exemplos, veja onde colocá-los na [seção 3.2](#32-usando-mais-dados).
 
@@ -292,7 +287,7 @@ python main.py figures
 ```
 
 Gera em `results/figures/` os gráficos usados no relatório técnico, todos calculados a partir dos
-arquivos de resultado (seção 6.6b). Rode depois de `all` e `video-validation`.
+arquivos de resultado (seção 6.6b). Rode depois de `all`.
 
 ---
 
@@ -468,7 +463,7 @@ Sempre a partir da pasta do projeto, com o ambiente ativo (`source .venv/Scripts
 | `python main.py video` | Captura de movimento + vídeos (OpenPose/YOLOv8) + relatórios |
 | `python main.py video-validation` | Mede a precisão da análise de vídeo contra o gabarito do fisioterapeuta (correta x incorreta) |
 | `python main.py fusion` | Pacientes virtuais + fusão + alertas |
-| `python main.py all` | `clinical` → `audio` → `video` → `fusion` |
+| `python main.py all` | `clinical` → `audio` → `video` → `video-validation` → `fusion` |
 | `python main.py monitor` | Simulação de tempo real dos sinais vitais no terminal |
 | `python main.py figures` | Gráficos dos resultados em `results/figures/` |
 | `python main.py summary` | Métricas principais de cada módulo no terminal |
@@ -683,7 +678,7 @@ python main.py figures
 Lê os JSON de `results/` e salva um PNG por gráfico em `results/figures/`: fluxo do sistema,
 recall e precisão por sinal vital, eventos por fonte, métricas e matrizes de confusão da voz,
 erro da transcrição por grupo, poder de cada característica no vídeo, contagem de repetições,
-alertas por nível e uso do Azure. Rode depois de `all` e `video-validation`; gráficos cujo
+alertas por nível e uso do Azure. Rode depois de `all`; gráficos cujo
 resultado ainda não existe são pulados.
 
 ### 6.7 Dashboard
@@ -883,7 +878,7 @@ A arquitetura completa (diagramas, formato `Event`, fusão, uso do Azure, memór
 | Vídeo × gabarito | Repetição correta × incorreta, testando sempre numa pessoa fora do treino (8 vídeos, 123 repetições) | Agachamento: ROC-AUC 0,79 (melhor sinal: inclinação do tronco, 0,82). Abdução: só 2 pessoas, o modelo não generaliza (0,12); o melhor sinal sozinho é o outro braço se mexer junto (0,79) | `video_validation.json`, `reports/video_validation.html` |
 | Contagem de repetições | Contagem automática × gabarito | 127 contadas para 123, no máximo 2 de diferença por vídeo | `video_validation.json` |
 | Captura de movimento | Ritmo rápido/lento como desvio (1 participante) | Regra de ritmo: 2 de 3 desvios, sem falso alarme | `video_summary.json`, `reports/physio_S01.html` |
-| Fusão | Eventos de todos os módulos por paciente, janela de 24 h | 14.240 eventos → 1.972 alertas (9 *critical*, 971 *high*, 992 *medium*); 17 multimodais | `fusion_summary.json`, `alerts.csv` |
+| Fusão | Eventos de todos os módulos por paciente, janela de 24 h | 14.283 eventos → 1.976 alertas (15 *critical*, 969 *high*, 992 *medium*); 21 multimodais | `fusion_summary.json`, `alerts.csv` |
 | Azure | Contador mensal | 309 s de áudio (1,7% da cota) e 24 registros de texto (0,5%) | `audio_summary.json` |
 
 Todos esses números aparecem nos gráficos de `python main.py figures` e no relatório técnico.
