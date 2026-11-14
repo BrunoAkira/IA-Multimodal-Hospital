@@ -159,23 +159,52 @@ INJECT_DELTA = {"heart_rate": 45, "systolic_bp": -45, "spo2": -9, "resp_rate": 1
 
 
 def evaluate_with_injection(hourly: pd.DataFrame, rate: float = 0.02, seed: int = 42) -> dict:
+    """Measure detector behavior against injected anomalies at several score cutoffs.
+
+    The precision is only relative to the injected labels: naturally occurring
+    anomalies in the source data are counted as non-injected and can therefore
+    appear as false positives. Use this as a threshold trade-off diagnostic,
+    not as a clinical precision estimate.
+    """
     rng = np.random.default_rng(seed)
     results = {}
+    thresholds = (0.5, 0.6, 0.7, 0.8, 0.9)
     for vital, delta in INJECT_DELTA.items():
         df = hourly[["stay_id", "charttime", vital]].dropna().copy()
         if len(df) < 50:
             continue
+        # The detector is stateful, so evaluate in the same chronological order
+        # used by the live replay, regardless of the loader's input ordering.
+        df = df.sort_values(["charttime", "stay_id"], kind="stable").reset_index(drop=True)
         injected = rng.random(len(df)) < rate
         df.loc[injected, vital] = df.loc[injected, vital] + delta
         det = VitalStreamDetector()
-        pred = np.array([det.update(s, vital, v)[0] >= 0.5 for s, v in zip(df["stay_id"], df[vital])])
-        tp = int((pred & injected).sum())
-        fp = int((pred & ~injected).sum())
-        fn = int((~pred & injected).sum())
+        scores = np.array([det.update(s, vital, v)[0] for s, v in zip(df["stay_id"], df[vital])])
+        threshold_metrics = {}
+        for threshold in thresholds:
+            pred = scores >= threshold
+            tp = int((pred & injected).sum())
+            fp = int((pred & ~injected).sum())
+            fn = int((~pred & injected).sum())
+            precision = tp / (tp + fp) if tp + fp else 0.0
+            recall = tp / (tp + fn) if tp + fn else 0.0
+            f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+            threshold_metrics[f"{threshold:.2f}"] = {
+                "precision": round(precision, 3),
+                "recall": round(recall, 3),
+                "f1": round(f1, 3),
+                "flagged": int(pred.sum()),
+            }
+
+        baseline = threshold_metrics["0.50"]
         results[vital] = {
             "injected": int(injected.sum()),
-            "precision": round(tp / (tp + fp), 3) if tp + fp else 0.0,
-            "recall": round(tp / (tp + fn), 3) if tp + fn else 0.0,
+            # Keep the original fields at the production/event cutoff for
+            # compatibility with existing summaries and charts.
+            "threshold": 0.5,
+            "precision": baseline["precision"],
+            "recall": baseline["recall"],
+            "threshold_metrics": threshold_metrics,
             # os "falsos positivos" incluem anomalias reais da base, por isso a precisão é um limite inferior
         }
     return results
