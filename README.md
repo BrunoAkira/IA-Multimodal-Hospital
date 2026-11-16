@@ -942,3 +942,17 @@ Todos esses números aparecem nos gráficos de `python main.py figures` e no rel
 | [2] | Base de fala | **TORGO Database** — Rudzicz, F., Namasivayam, A. K., Wolff, T., University of Toronto. Cópia em Parquet: https://huggingface.co/datasets/abnerh/TORGO-database | Conforme os autores (verificar antes de redistribuir) |
 | [3] | Base de captura de movimento | **UL-RED — University of Liverpool Rehabilitation Exercise Dataset**, *Scientific Data* 12:761 (2025). https://datacat.liverpool.ac.uk/2729/ | CC BY 4.0 |
 | [4] | Base de vídeos de exercícios | **REHAB24-6** — Černek, A., Sedmidubsky, J., Budikova, P. *REHAB24-6: Physical Therapy Dataset for Analyzing Pose Estimation Methods*. SISAP 2024. https://zenodo.org/records/13305826 | CC BY-NC 4.0 |
+
+
+### Equipe
+## PosTech FIAP — IA para Devs — Fase 4
+
+Arthur Oliveira - RM372670
+
+Bruno Akira - RM372131
+
+Camila Flores - RM372571
+
+Felipe Pereira - RM371604
+
+Rodrigo Canela - RM371859
